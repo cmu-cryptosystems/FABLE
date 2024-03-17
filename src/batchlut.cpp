@@ -14,7 +14,7 @@
 using namespace sci;
 using std::cout, std::endl, std::vector;
 
-int party, port = 8000, batch_size = 256, parallel = 1;
+int party, port = 8000, batch_size = 256, parallel = 1, type = 0;
 int db_size = (1 << LUT_OUTPUT_SIZE);
 int bitlength = LUT_OUTPUT_SIZE;
 NetIO *io_gc;
@@ -23,7 +23,7 @@ const int client_id = 0;
 
 void test_lut() {
 	
-	BatchPirParams params(batch_size, db_size, bitlength / 4, parallel);
+	BatchPirParams params(batch_size, db_size, bitlength / 4, parallel, (BatchPirType)type);
     // params.print_params();
 
 	BatchLUTConfig config{
@@ -61,15 +61,21 @@ void test_lut() {
 	int num_bucket = params.get_num_buckets();
 	int bucket_size = params.get_bucket_size();
 
+	// synchronize
+	bool prepared = false;
+	if (party == BOB) {
+		prepared = true;
+		io_gc->send_data(&prepared, sizeof(prepared));
+	} else {
+		io_gc->recv_data(&prepared, sizeof(prepared));
+		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
+	}
+
 	cout << BLUE << "BatchLUT" << RESET << endl;
 	start_record(io_gc, "BatchLUT");
 
-	// Deduplication
-	start_record(io_gc, "Deduplicate");
-	auto context = deduplicate(secret_queries, config);
-	end_record(io_gc, "Deduplicate");
-
 	// Initialize server and client
+	start_record(io_gc, "Initialization");
 	if (party == ALICE) {
 		batch_server = new BatchPIRServer(params);
 		batch_server->populate_raw_db(generator);
@@ -77,6 +83,12 @@ void test_lut() {
 	} else {
 		batch_client = new BatchPIRClient(params);
 	}
+	end_record(io_gc, "Initialization");
+
+	// Deduplication
+	start_record(io_gc, "Deduplicate");
+	auto context = deduplicate(secret_queries, config);
+	end_record(io_gc, "Deduplicate");
 
 	// prepare batch
 	start_record(io_gc, "Batch Preparation");
@@ -300,6 +312,7 @@ int main(int argc, char **argv) {
 	amap.arg("p", port, "Port Number");
 	amap.arg("s", batch_size, "number of total elements");
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
+	amap.arg("t", type, "0 = PIRANA; 1 = UIUC");
 	amap.parse(argc, argv);
 	io_gc = new NetIO(party == ALICE ? nullptr : "127.0.0.1",
 						port + GC_PORT_OFFSET, true);
@@ -308,6 +321,7 @@ int main(int argc, char **argv) {
 	setup_semi_honest(io_gc, party);
 	auto time_span = time_from(time_start);
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
+	utils::check(type == 0, "Only PIRANA is supported now. "); 
 	test_lut();
 	io_gc->flush();
 	delete io_gc;
