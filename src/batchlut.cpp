@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <fmt/core.h>
+#include <omp.h>
 #include <seal/util/defines.h>
 #include <set>
 #include "batchpirserver.h"
@@ -306,6 +307,8 @@ void test_lut() {
 }
 
 int main(int argc, char **argv) {
+
+	cout << "Maximum #threads = " << omp_get_max_threads() << endl;
 	
 	ArgMapping amap;
 	amap.arg("r", party, "Role of party: ALICE = 1; BOB = 2");
