@@ -14,10 +14,9 @@
 using namespace sci;
 using std::cout, std::endl, std::vector;
 
-int party, port = 8000, batch_size = 256;
-int db_size = (1 << 16);
-int bitlength = 16;
-int parallel = 1;
+int party, port = 8000, batch_size = 256, parallel = 1;
+int db_size = (1 << LUT_OUTPUT_SIZE);
+int bitlength = LUT_OUTPUT_SIZE;
 NetIO *io_gc;
 
 const int client_id = 0;
@@ -286,6 +285,12 @@ void test_lut() {
 
 	cout << GREEN << "[BatchLUT] Test passed" << RESET << endl;
 
+	if (party == ALICE) {
+		delete batch_server;
+	} else {
+		delete batch_client;
+	}
+
 }
 
 int main(int argc, char **argv) {
@@ -305,4 +310,5 @@ int main(int argc, char **argv) {
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
 	test_lut();
 	io_gc->flush();
+	delete io_gc;
 }

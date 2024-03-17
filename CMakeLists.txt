@@ -19,6 +19,10 @@ if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}/lib")
 endif()
 
+if (NOT DEFINED LUT_OUTPUT_SIZE) 
+    set(LUT_OUTPUT_SIZE 16)
+endif()
+
 find_package(FMT REQUIRED)
 
 add_subdirectory(src)

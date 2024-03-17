@@ -5,9 +5,11 @@ This is an end-to-end implementation of batched LUT.
 To compile, 
 
 ```bash
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_OUTPUT_SIZE=$OUTPUT_SIZE
 cmake --build ./build --target batchlut
 ```
+
+`$OUTPUT_SIZE` can be set as 16 or 20. 
 
 Then launch 
 
