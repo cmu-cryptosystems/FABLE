@@ -1,0 +1,11 @@
+macro (add_GC_test _name)
+	add_executable(${_name} "test_${_name}.cpp")
+    target_link_libraries(${_name} batchlut-GC fmt::fmt) 
+    target_include_directories(${_name} PRIVATE "${PROJECT_SOURCE_DIR}/src")
+endmacro()
+
+add_GC_test(sort)
+add_GC_test(compaction)
+add_GC_test(deduplication)
+add_GC_test(lowmc)
+add_GC_test(subcube)
