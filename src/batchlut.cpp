@@ -39,16 +39,11 @@ void test_lut() {
     vector<Integer> secret_queries(batch_size);
 	vector<uint64_t> lut(db_size);
     for (int i = 0; i < batch_size; i++) {
-        plain_queries[i] = rand() % (batch_size / 2);
+        plain_queries[i] = rand() % db_size;
 		secret_queries[i] = Integer(bitlength + 1, plain_queries[i], BOB);
 	}
 	for (int i = 0; i < db_size; i ++) {
 		lut[i] = rand() % db_size;
-	}
-
-    vector<rawinputblock> plain_queries_rawdata(batch_size);
-    for (int i = 0; i < batch_size; i++) {
-		plain_queries_rawdata[i] = rawinputblock(plain_queries[i]);
 	}
 
 	auto generator = [lut](size_t i){return rawdatablock(lut.at(i)); };
