@@ -69,17 +69,15 @@ void test_lut() {
 
 	cout << BLUE << "BatchLUT" << RESET << endl;
 	start_record(io_gc, "BatchLUT");
-
-	// Initialize server and client
-	start_record(io_gc, "Initialization");
+	
+    vector<keyblock> keys(w); 
+    vector<prefixblock> prefixes(w); 
 	if (party == ALICE) {
-		batch_server = new BatchPIRServer(params);
-		batch_server->populate_raw_db(generator);
-		batch_server->initialize();
-	} else {
-		batch_client = new BatchPIRClient(params);
+		for (size_t hash_idx = 0; hash_idx < w; hash_idx++) {
+			keys[hash_idx] = random_bitset<utils::keysize>();
+			prefixes[hash_idx] = random_bitset<utils::prefixsize>();
+		}
 	}
-	end_record(io_gc, "Initialization");
 
 	// Deduplication
 	start_record(io_gc, "Deduplicate");
@@ -91,8 +89,7 @@ void test_lut() {
     vector<vector<string>> batch(batch_size, vector<string>(w));
 	vector<sci::LowMC> ciphers_2PC;
 	for (int hash_idx = 0; hash_idx < w; hash_idx++) {
-		keyblock key = party == ALICE ? batch_server->ciphers[hash_idx].get_key() : 0;
-		ciphers_2PC.emplace_back(sci::LowMC(key, ALICE, batch_size));
+		ciphers_2PC.emplace_back(sci::LowMC(keys[hash_idx], ALICE, batch_size));
 	}
 
 	vector<secret_block> m(w);
@@ -101,7 +98,7 @@ void test_lut() {
 			m[hash_idx][j] = Integer(batch_size, 0, PUBLIC);
 			for (int i = 0; i < batch_size; i++) {
 				if (j >= bitlength+1) {
-					bool value = (party == ALICE) ? batch_server->ciphers[hash_idx].prefix[j-bitlength-1] : 0;
+					bool value = (party == ALICE) ? prefixes[hash_idx][j-bitlength-1] : 0;
 					m[hash_idx][j][i] = Bit(value, ALICE);
 				} else {
 					m[hash_idx][j][i] = secret_queries[i][j];
@@ -128,10 +125,15 @@ void test_lut() {
 	vector<IntegerArray> B_entry(w, IntegerArray(num_bucket));
 	vector<IntegerArray> index(w, IntegerArray(num_bucket));
 	vector<IntegerArray> entry(w, IntegerArray(num_bucket));
+	vector<int> sort_reference(num_bucket, 0);
+	CompResultType sort_res;
 
 	// PIR
 	start_record(io_gc, "PIR");
 	if (party == BOB) {
+		
+		batch_client = new BatchPIRClient(params);
+
 		auto queries = batch_client->create_queries(batch);
 		auto query_buffer = batch_client->serialize_query(queries);
 		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
@@ -152,6 +154,20 @@ void test_lut() {
                 }
             }
         }
+
+		set<int> dummy_buckets;
+		for(int bucket_idx = 0; bucket_idx < num_bucket; ++bucket_idx) {
+			if (batch_client->cuckoo_map.count(bucket_idx) == 0)
+				dummy_buckets.insert(bucket_idx);
+		}
+		vector<int> dummies(dummy_buckets.begin(), dummy_buckets.end());
+		for (int i = 0; i < batch_size; i++) {
+			sort_reference[i] = batch_client->inv_cuckoo_map[i];
+		}
+		for (int i = batch_size; i < num_bucket; i++) {
+			sort_reference[i] = dummies[i - batch_size];
+		}
+		sort_res = sort(sort_reference, num_bucket, BOB);
 
 		vector<vector<vector<seal_byte>>> response_buffer(params.response_size[0]);
 		for (int i = 0; i < params.response_size[0]; i++) {
@@ -199,6 +215,10 @@ void test_lut() {
 			}
 		}
 	} else {
+		batch_server = new BatchPIRServer(params);
+		batch_server->populate_raw_db(generator);
+		batch_server->initialize(keys, prefixes);
+
 		uint32_t glk_size, rlk_size;
 		io_gc->recv_data(&glk_size, sizeof(uint32_t));
 		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
@@ -219,6 +239,8 @@ void test_lut() {
                 }
             }
         }
+
+		sort_res = sort(sort_reference, num_bucket, BOB);
 
 		auto queries = batch_server->deserialize_query(query_buffer);
 		vector<PIRResponseList> responses = batch_server->generate_response(client_id, queries);
@@ -260,29 +282,10 @@ void test_lut() {
 			entry[hash_idx][bucket_idx] = A_entry[hash_idx][bucket_idx] ^ B_entry[hash_idx][bucket_idx];
 		}
 	}
-	end_record(io_gc, "PIR");
 
 	// Collect result
-	start_record(io_gc, "Result Collection");
 	auto zero_index = Integer(bitlength+1, 0);
 	secret_queries.resize(num_bucket, zero_index);
-	vector<int> sort_reference(num_bucket, 0);
-	if (party == BOB) {
-		set<int> dummy_buckets;
-		for(int bucket_idx = 0; bucket_idx < num_bucket; ++bucket_idx) {
-			if (batch_client->cuckoo_map.count(bucket_idx) == 0)
-				dummy_buckets.insert(bucket_idx);
-		}
-		vector<int> dummies(dummy_buckets.begin(), dummy_buckets.end());
-		for (int i = 0; i < batch_size; i++) {
-			sort_reference[i] = batch_client->inv_cuckoo_map[i];
-		}
-		for (int i = batch_size; i < num_bucket; i++) {
-			sort_reference[i] = dummies[i - batch_size];
-		}
-	}
-
-	auto sort_res = sort(sort_reference, num_bucket, BOB);
 	permute(sort_res, secret_queries);
 
 	auto zero_entry = Integer(bitlength, 0);
@@ -294,7 +297,7 @@ void test_lut() {
 			result[bucket_idx] = result[bucket_idx] ^ If(selected_query == index[hash_idx][bucket_idx], entry[hash_idx][bucket_idx], zero_entry);
 		}
 	}
-	end_record(io_gc, "Result Collection");
+	end_record(io_gc, "PIR");
 
 	// Remapping
 	start_record(io_gc, "Remapping");
