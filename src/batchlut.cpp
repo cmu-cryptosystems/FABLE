@@ -172,11 +172,30 @@ void test_lut() {
 				A_entry[hash_idx][bucket_idx] = Integer(bitlength, 0, ALICE);
 			}
 		}
+
+		int total_length = w * num_bucket * datablock_size;
+		bool* b = new bool[total_length];
+		vector<Bit> bits(total_length);
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
 				auto [index, entry] = utils::split<DatabaseConstants::InputLength>(decode_responses[bucket_idx][hash_idx]);
-				B_index[hash_idx][bucket_idx] = Integer(bitlength+1, index.to_ullong(), BOB);
-				B_entry[hash_idx][bucket_idx] = Integer(bitlength, entry.to_ullong(), BOB);
+				for (int bit_idx = 0; bit_idx < datablock_size; bit_idx++) {
+					if (bit_idx < DatabaseConstants::InputLength) {
+						b[hash_idx * num_bucket * datablock_size + bucket_idx * datablock_size + bit_idx] = index[bit_idx];
+					} else {
+						b[hash_idx * num_bucket * datablock_size + bucket_idx * datablock_size + bit_idx] = entry[bit_idx - DatabaseConstants::InputLength];
+					}
+				}
+			}
+		}
+		prot_exec->feed((block128 *)bits.data(), BOB, b, total_length); 
+		delete[] b;
+
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
+			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
+				auto start_it = bits.begin() + (hash_idx * num_bucket * datablock_size + bucket_idx * datablock_size);
+				B_index[hash_idx][bucket_idx].bits = vector<Bit>(start_it, start_it + DatabaseConstants::InputLength);
+				B_entry[hash_idx][bucket_idx].bits = vector<Bit>(start_it + DatabaseConstants::InputLength, start_it + datablock_size);
 			}
 		}
 	} else {
@@ -218,24 +237,30 @@ void test_lut() {
 				A_entry[hash_idx][bucket_idx] = Integer(bitlength, batch_server->entry_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
 			}
 		}
-		
+
+		int total_length = w * num_bucket * datablock_size;
+		bool* b = new bool[total_length];
+		std::fill(b, b + total_length, false);
+		vector<Bit> bits(total_length);
+		prot_exec->feed((block128 *)bits.data(), BOB, b, total_length); 
+		delete[] b;
+
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
-				B_index[hash_idx][bucket_idx] = Integer(bitlength+1, 0, BOB);
-				B_entry[hash_idx][bucket_idx] = Integer(bitlength, 0, BOB);
+				auto start_it = bits.begin() + (hash_idx * num_bucket * datablock_size + bucket_idx * datablock_size);
+				B_index[hash_idx][bucket_idx].bits = vector<Bit>(start_it, start_it + DatabaseConstants::InputLength);
+				B_entry[hash_idx][bucket_idx].bits = vector<Bit>(start_it + DatabaseConstants::InputLength, start_it + datablock_size);
 			}
 		}
 	}
-	end_record(io_gc, "PIR");
 
-	start_record(io_gc, "Share recovery");
 	for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			index[hash_idx][bucket_idx] = A_index[hash_idx][bucket_idx] ^ B_index[hash_idx][bucket_idx];
 			entry[hash_idx][bucket_idx] = A_entry[hash_idx][bucket_idx] ^ B_entry[hash_idx][bucket_idx];
 		}
 	}
-	end_record(io_gc, "Share recovery");
+	end_record(io_gc, "PIR");
 
 	// Collect result
 	start_record(io_gc, "Result Collection");
