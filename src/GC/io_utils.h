@@ -4,6 +4,8 @@
 #include "GC/emp-sh2pc.h"
 #include <string>
 
+using namespace std::chrono;
+using std::cout, std::endl;
 struct recordinfo {
   uint64_t counter;
   uint64_t num_rounds;
@@ -13,5 +15,8 @@ struct recordinfo {
 
 void start_record(sci::NetIO* io, std::string tag);
 void end_record(sci::NetIO* io, std::string tag);
+
+void start_timing(string prefix);
+double end_timing(string prefix, bool verbose = true);
 
 #endif

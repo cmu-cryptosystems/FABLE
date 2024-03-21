@@ -29,9 +29,12 @@ secret_block batch_xor(const secret_block &a, const shared_block &b) {
     secret_block res;
     uint32_t simd_elems = a[0].size();
     for (unsigned i = 0; i < blocksize; i++) {
-        res[i] = Integer(simd_elems, 0);
-        for (unsigned j = 0; j < simd_elems; j++) {
-            res[i][j] = a[i][j] ^ b[i];
+        res[i].bits.resize(simd_elems);
+    }
+    #pragma omp simd collapse(2)
+    for (int i = 0; i < blocksize; i++) {
+        for (int j = 0; j < simd_elems; j++) {
+            res[i][j].bit = a[i][j].bit ^ b[i].bit;
         }
     }
     return res;
@@ -133,11 +136,14 @@ void LowMC::Substitution (secret_block &message) {
 secret_block LowMC::MultiplyWithGF2Matrix
         (const std::array<block, blocksize>& matrix, const secret_block message) {
     secret_block temp;
+    temp.fill(Integer(nvals_, 0));
     for (unsigned i = 0; i < blocksize; ++i) {
-        temp[i] = Integer(nvals_, 0);
         for (unsigned j = 0; j < blocksize; ++j) {
             if (matrix[i][j]) {
-                temp[i] = temp[i] ^ message[j];
+                #pragma omp simd
+                for (unsigned k = 0; k < nvals_; ++k) {
+                    temp[i][k].bit = temp[i][k].bit ^ message[j][k].bit;
+                }
             }
         }
     }

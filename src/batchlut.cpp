@@ -94,25 +94,28 @@ void test_lut() {
 
 	vector<secret_block> m(w);
 	for (int hash_idx = 0; hash_idx < w; hash_idx++) {	
+		Integer secret_prefix(prefixsize, prefixes[hash_idx].to_ullong(), ALICE);
 		for (int j = 0; j < sci::blocksize; j++) {
-			m[hash_idx][j] = Integer(batch_size, 0, PUBLIC);
-			for (int i = 0; i < batch_size; i++) {
-				if (j >= bitlength+1) {
-					bool value = (party == ALICE) ? prefixes[hash_idx][j-bitlength-1] : 0;
-					m[hash_idx][j][i] = Bit(value, ALICE);
-				} else {
+			m[hash_idx][j].bits.resize(batch_size);
+			if (j >= bitlength+1) {
+				m[hash_idx][j].bits.assign(batch_size, secret_prefix[j-bitlength-1]);
+			} else {
+				for (int i = 0; i < batch_size; i++) {
 					m[hash_idx][j][i] = secret_queries[i][j];
 				}
 			}
 		}
 	}
 
+	vector<secret_block> c(w);
 	for (int hash_idx = 0; hash_idx < w; hash_idx++) {
-		auto c = ciphers_2PC[hash_idx].encrypt(m[hash_idx]); // blocksize, batchsize
+		c[hash_idx] = ciphers_2PC[hash_idx].encrypt(m[hash_idx]); // blocksize, batchsize
+	}
+	for (int hash_idx = 0; hash_idx < w; hash_idx++) {
     	for (int i = 0; i < batch_size; i++) {
 			block hash_out;
 			for (int j = 0; j < sci::blocksize; j++) {
-				hash_out[j] = c[j][i].reveal(BOB);
+				hash_out[j] = c[hash_idx][j][i].reveal(BOB);
 			}
 			batch[i][hash_idx] = hash_out.to_string();
 		}
