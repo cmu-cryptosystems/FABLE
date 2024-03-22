@@ -1,0 +1,12 @@
+diff --git a/SCI/src/cleartext_library_float.h b/SCI/src/cleartext_library_float.h
+index 37007ee..e76ae88 100644
+--- a/SCI/src/cleartext_library_float.h
++++ b/SCI/src/cleartext_library_float.h
+@@ -22,6 +22,7 @@ SOFTWARE.
+ #ifndef LIBRARY_CLEARTEXT_FLOAT_H__
+ #define LIBRARY_CLEARTEXT_FLOAT_H__
+ 
++#include <cstdint>
+ #include <vector>
+ #include <math.h>
+ #include <cstdlib>

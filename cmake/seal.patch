@@ -1,0 +1,12 @@
+diff --git a/native/src/seal/util/locks.h b/native/src/seal/util/locks.h
+index e0bd1c9b..7fee82ad 100644
+--- a/native/src/seal/util/locks.h
++++ b/native/src/seal/util/locks.h
+@@ -7,6 +7,7 @@
+ 
+ #ifdef SEAL_USE_SHARED_MUTEX
+ #include <shared_mutex>
++#include <mutex>
+ 
+ namespace seal
+ {
