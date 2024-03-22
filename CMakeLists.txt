@@ -6,6 +6,11 @@ project(
     LANGUAGES C CXX
 )
 
+execute_process(COMMAND git apply "${PROJECT_SOURCE_DIR}/cmake/ezpc.patch"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/EzPC")
+execute_process(COMMAND git apply "${PROJECT_SOURCE_DIR}/cmake/seal.patch"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/EzPC/SCI/extern/SEAL")
+
 add_subdirectory(extern)
 
 # Write built executables and libraries to bin/ and lib/, respectively.
