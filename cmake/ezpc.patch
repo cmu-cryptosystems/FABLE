@@ -1,15 +1,3 @@
-diff --git a/SCI/src/cleartext_library_float.h b/SCI/src/cleartext_library_float.h
-index 37007ee..e76ae88 100644
---- a/SCI/src/cleartext_library_float.h
-+++ b/SCI/src/cleartext_library_float.h
-@@ -22,6 +22,7 @@ SOFTWARE.
- #ifndef LIBRARY_CLEARTEXT_FLOAT_H__
- #define LIBRARY_CLEARTEXT_FLOAT_H__
- 
-+#include <cstdint>
- #include <vector>
- #include <math.h>
- #include <cstdlib>
 diff --git a/SCI/src/LinearHE/CMakeLists.txt b/SCI/src/LinearHE/CMakeLists.txt
 index 37a518e..2b58827 100644
 --- a/SCI/src/LinearHE/CMakeLists.txt
@@ -23,3 +11,15 @@ index 37a518e..2b58827 100644
          WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/SEAL/native/src")
      find_package(SEAL 3.3.2 EXACT REQUIRED PATHS "${PROJECT_SOURCE_DIR}/build/" NO_DEFAULT_PATH)
  endif()
+diff --git a/SCI/src/cleartext_library_float.h b/SCI/src/cleartext_library_float.h
+index 37007ee..e76ae88 100644
+--- a/SCI/src/cleartext_library_float.h
++++ b/SCI/src/cleartext_library_float.h
+@@ -22,6 +22,7 @@ SOFTWARE.
+ #ifndef LIBRARY_CLEARTEXT_FLOAT_H__
+ #define LIBRARY_CLEARTEXT_FLOAT_H__
+ 
++#include <cstdint>
+ #include <vector>
+ #include <math.h>
+ #include <cstdlib>
