@@ -4,3 +4,6 @@
 [submodule "extern/BatchPIR"]
 	path = extern/BatchPIR
 	url = https://github.com/timsu1104/LUT-PIRANA.git
+[submodule "extern/SEAL"]
+	path = extern/SEAL
+	url = https://github.com/microsoft/SEAL.git
