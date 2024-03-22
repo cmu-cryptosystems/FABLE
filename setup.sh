@@ -20,6 +20,9 @@ cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_OUTPUT_SIZE=16\
  -DOPENSSL_SSL_LIBRARY=$HOME/miniforge3/envs/batchlut/lib/libssl.so
 cmake --build ./build --target batchlut --parallel
 
+echo mamba activate batchlut >> ~/.bashrc
+echo cd BatchLUT >> ~/.bashrc
+
 # reenter
 mamba activate batchlut
 cd BatchLUT

@@ -7,8 +7,8 @@ add_executable(batchlut "batchlut.cpp" ${SOURCES})
 find_package(SEAL 4.1 QUIET PATHS "${PROJECT_SOURCE_DIR}/build/seal_4_1" NO_DEFAULT_PATH)
 
 if (NOT SEAL_FOUND)
-    message(STATUS "SEAL 4.1 was not found: clone and install SEAL locally")
-    execute_process(COMMAND ${CMAKE_COMMAND} -S . -B build  -DCMAKE_INSTALL_PREFIX=${PROJECT_SOURCE_DIR}/build/seal_4_1
+    message(STATUS "clone and install SEAL locally")
+    execute_process(COMMAND ${CMAKE_COMMAND} -E env CC=clang CXX=clang++ ${CMAKE_COMMAND} -S . -B ${PROJECT_SOURCE_DIR}/extern/SEAL/build -DCMAKE_INSTALL_PREFIX=${PROJECT_SOURCE_DIR}/build/seal_4_1
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/SEAL")
     execute_process(COMMAND ${CMAKE_COMMAND} --build ./build --target install --parallel
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/SEAL")
