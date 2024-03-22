@@ -40,7 +40,7 @@ void test_lut() {
 	vector<uint64_t> lut(db_size);
     for (int i = 0; i < batch_size; i++) {
         plain_queries[i] = rand() % db_size;
-		secret_queries[i] = Integer(bitlength + 1, plain_queries[i], BOB);
+		secret_queries[i] = Integer(DatabaseConstants::InputLength, plain_queries[i], BOB);
 	}
 	for (int i = 0; i < db_size; i ++) {
 		lut[i] = rand() % db_size;
@@ -67,6 +67,7 @@ void test_lut() {
 		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
 	}
 
+	io_gc->flush();
 	cout << BLUE << "BatchLUT" << RESET << endl;
 	start_record(io_gc, "BatchLUT");
 	
@@ -342,8 +343,8 @@ int main(int argc, char **argv) {
 	amap.arg("s", batch_size, "number of total elements");
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
 	amap.arg("t", type, "0 = PIRANA; 1 = UIUC");
-	amap.parse(argc, argv);
-	io_gc = new NetIO(party == ALICE ? nullptr : "127.0.0.1",
+	amap.parse(argc-1, argv+1);
+	io_gc = new NetIO(party == ALICE ? nullptr : argv[1],
 						port + GC_PORT_OFFSET, true);
 
 	auto time_start = clock_start(); 
@@ -352,6 +353,5 @@ int main(int argc, char **argv) {
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
 	utils::check(type == 0, "Only PIRANA is supported now. "); 
 	test_lut();
-	io_gc->flush();
 	delete io_gc;
 }
