@@ -22,6 +22,17 @@ NetIO *io_gc;
 
 const int client_id = 0;
 
+void barrier() {
+	bool prepared = false;
+	if (party == BOB) {
+		prepared = true;
+		io_gc->send_data(&prepared, sizeof(prepared));
+	} else {
+		io_gc->recv_data(&prepared, sizeof(prepared));
+		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
+	}
+}
+
 void test_lut() {
 	
 	BatchPirParams params(batch_size, db_size, bitlength / 4, parallel, (BatchPirType)type);
@@ -58,14 +69,7 @@ void test_lut() {
 	int bucket_size = params.get_bucket_size();
 
 	// synchronize
-	bool prepared = false;
-	if (party == BOB) {
-		prepared = true;
-		io_gc->send_data(&prepared, sizeof(prepared));
-	} else {
-		io_gc->recv_data(&prepared, sizeof(prepared));
-		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
-	}
+	barrier();
 
 	io_gc->flush();
 	cout << BLUE << "BatchLUT" << RESET << endl;
