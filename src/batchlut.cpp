@@ -17,16 +17,14 @@ using namespace sci;
 using std::cout, std::endl, std::vector;
 
 int party, port = 8000, batch_size = 256, parallel = 1, type = 0, lut_type = 0;
-int db_size = (1 << LUT_OUTPUT_SIZE);
-int bitlength = LUT_OUTPUT_SIZE;
+const int bitlength = LUT_OUTPUT_SIZE;
+const int client_id = 0;
 NetIO *io_gc;
 
 enum LUTType {
 	Random, 
 	Gamma
 };
-
-const int client_id = 0;
 
 void barrier() {
 	bool prepared = false;
@@ -50,15 +48,15 @@ inline double itof(uint64_t x, double scale = 10) {
 }
 
 inline vector<uint64_t> get_lut(LUTType lut_typ) {
-	vector<uint64_t> lut(db_size);
-	vector<double> abs_error(db_size, 0);
-	vector<double> rel_error(db_size, 0);
+	vector<uint64_t> lut(DatabaseConstants::DBSize);
+	vector<double> abs_error(DatabaseConstants::DBSize, 0);
+	vector<double> rel_error(DatabaseConstants::DBSize, 0);
 	
-	for (uint64_t i = 0; i < db_size; i ++) {
+	for (uint64_t i = 0; i < DatabaseConstants::DBSize; i ++) {
 		if (lut_typ == Random)
-			lut[i] = rand() % db_size;
+			lut[i] = rand() % DatabaseConstants::DBSize;
 		else if (lut_typ == Gamma) {
-			double input = (double)i/db_size * 3 + 1; // from 1 to 4
+			double input = (double)i/DatabaseConstants::DBSize * 3 + 1; // from 1 to 4
 			double value = std::tgamma(input);
 			lut[i] = ftoi(value);
 			abs_error[i] = abs(itof(lut[i]) - value);
@@ -74,14 +72,14 @@ inline vector<uint64_t> get_lut(LUTType lut_typ) {
 }
 
 void test_lut() {
-	
-	BatchPirParams params(batch_size, db_size, bitlength / 4, parallel, (BatchPirType)type);
+
+	BatchPirParams params(batch_size, parallel, (BatchPirType)type);
     // params.print_params();
 
 	BatchLUTConfig config{
 		batch_size, 
 		(int)params.get_bucket_size(), 
-		db_size, 
+		DatabaseConstants::DBSize, 
 		bitlength + 1
 	};
 
@@ -91,7 +89,7 @@ void test_lut() {
 	vector<uint64_t> lut = get_lut((LUTType)lut_type);
 
     for (int i = 0; i < batch_size; i++) {
-        plain_queries[i] = rand() % db_size;
+        plain_queries[i] = rand() % DatabaseConstants::DBSize;
 		secret_queries[i] = Integer(DatabaseConstants::InputLength, plain_queries[i], BOB);
 	}
 
@@ -102,7 +100,7 @@ void test_lut() {
 
 	// ALICE: server
 	// BOB: client
-	int w = params.get_num_hash_funcs();
+	int w = DatabaseConstants::NumHashFunctions;
 	int num_bucket = params.get_num_buckets();
 	int bucket_size = params.get_bucket_size();
 
