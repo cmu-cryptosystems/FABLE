@@ -2,6 +2,7 @@
 #include "GC/deduplicate.h"
 #include "GC/lowmc.h"
 #include "GC/io_utils.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -15,10 +16,15 @@
 using namespace sci;
 using std::cout, std::endl, std::vector;
 
-int party, port = 8000, batch_size = 256, parallel = 1, type = 0;
+int party, port = 8000, batch_size = 256, parallel = 1, type = 0, lut_type = 0;
 int db_size = (1 << LUT_OUTPUT_SIZE);
 int bitlength = LUT_OUTPUT_SIZE;
 NetIO *io_gc;
+
+enum LUTType {
+	Random, 
+	Gamma
+};
 
 const int client_id = 0;
 
@@ -31,6 +37,41 @@ void barrier() {
 		io_gc->recv_data(&prepared, sizeof(prepared));
 		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
 	}
+}
+
+inline int ftoi(double x, double lo, double hi) {
+	x = clamp(x, lo, hi);
+	x = (x - lo) / (hi - lo);
+	x = round(x * db_size);
+	return x;
+}
+
+inline double itof(int x, double lo, double hi) {
+	return lo + ((double)x / db_size) * (hi - lo);
+}
+
+inline vector<uint64_t> get_lut(LUTType lut_typ) {
+	vector<uint64_t> lut(db_size);
+	vector<double> abs_error(db_size, 0);
+	vector<double> rel_error(db_size, 0);
+	
+	for (int i = 0; i < db_size; i ++) {
+		if (lut_typ == Random)
+			lut[i] = rand() % db_size;
+		else if (lut_typ == Gamma) {
+			double input = itof(i, 1, 4);
+			double value = std::tgamma(input);
+			lut[i] = ftoi(value, 0, 6);
+			abs_error[i] = abs(itof(lut[i], 0, 6) - value);
+			rel_error[i] = abs_error[i] / value;
+		}
+	}
+	cout << fmt::format(
+		"LUT built. \nMax Absolute error = {}\nMax Relative error = {}", 
+		*std::max_element(abs_error.begin(), abs_error.end()),
+		*std::max_element(rel_error.begin(), rel_error.end())
+	) << endl;
+	return lut;
 }
 
 void test_lut() {
@@ -48,13 +89,11 @@ void test_lut() {
 	// preparing queries
     vector<uint64_t> plain_queries(batch_size);
     vector<Integer> secret_queries(batch_size);
-	vector<uint64_t> lut(db_size);
+	vector<uint64_t> lut = get_lut((LUTType)lut_type);
+
     for (int i = 0; i < batch_size; i++) {
         plain_queries[i] = rand() % db_size;
 		secret_queries[i] = Integer(DatabaseConstants::InputLength, plain_queries[i], BOB);
-	}
-	for (int i = 0; i < db_size; i ++) {
-		lut[i] = rand() % db_size;
 	}
 
 	auto generator = [lut](size_t i){return rawdatablock(lut.at(i)); };
@@ -347,6 +386,7 @@ int main(int argc, char **argv) {
 	amap.arg("s", batch_size, "number of total elements");
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
 	amap.arg("t", type, "0 = PIRANA; 1 = UIUC");
+	amap.arg("l", lut_type, "0 = Random LUT; 1 = Gamma LUT");
 	amap.parse(argc-1, argv+1);
 	io_gc = new NetIO(party == ALICE ? nullptr : argv[1],
 						port + GC_PORT_OFFSET, true);
@@ -358,4 +398,5 @@ int main(int argc, char **argv) {
 	utils::check(type == 0, "Only PIRANA is supported now. "); 
 	test_lut();
 	delete io_gc;
+	return 0;
 }

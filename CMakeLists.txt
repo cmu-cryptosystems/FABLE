@@ -6,9 +6,9 @@ project(
     LANGUAGES C CXX
 )
 
-execute_process(COMMAND git apply "${PROJECT_SOURCE_DIR}/cmake/ezpc.patch"
+execute_process(COMMAND (git apply "${PROJECT_SOURCE_DIR}/cmake/ezpc.patch") || (git apply "${PROJECT_SOURCE_DIR}/cmake/ezpc.patch" --reverse --check)
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/EzPC")
-execute_process(COMMAND git apply "${PROJECT_SOURCE_DIR}/cmake/seal.patch"
+execute_process(COMMAND (git apply "${PROJECT_SOURCE_DIR}/cmake/seal.patch") || (git apply "${PROJECT_SOURCE_DIR}/cmake/seal.patch" --reverse --check)
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/EzPC/SCI/extern/SEAL")
 
 add_subdirectory(extern)
