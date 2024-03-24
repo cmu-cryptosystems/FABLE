@@ -39,15 +39,14 @@ void barrier() {
 	}
 }
 
-inline int ftoi(double x, double lo, double hi) {
-	x = clamp(x, lo, hi);
-	x = (x - lo) / (hi - lo);
-	x = round(x * db_size);
-	return x;
+// Convert double to fixed point integer (scale is the upper bound, -scale is the lower bound)
+inline uint64_t ftoi(double x, double scale = 10) {
+	return round(clamp(x / scale, -1., 1.) * (1 << bitlength));
 }
 
-inline double itof(int x, double lo, double hi) {
-	return lo + ((double)x / db_size) * (hi - lo);
+// Convert fixed point integer to double
+inline double itof(uint64_t x, double scale = 10) {
+	return x * scale / (1 << bitlength);
 }
 
 inline vector<uint64_t> get_lut(LUTType lut_typ) {
@@ -55,14 +54,14 @@ inline vector<uint64_t> get_lut(LUTType lut_typ) {
 	vector<double> abs_error(db_size, 0);
 	vector<double> rel_error(db_size, 0);
 	
-	for (int i = 0; i < db_size; i ++) {
+	for (uint64_t i = 0; i < db_size; i ++) {
 		if (lut_typ == Random)
 			lut[i] = rand() % db_size;
 		else if (lut_typ == Gamma) {
-			double input = itof(i, 1, 4);
+			double input = (double)i/db_size * 3 + 1; // from 1 to 4
 			double value = std::tgamma(input);
-			lut[i] = ftoi(value, 0, 6);
-			abs_error[i] = abs(itof(lut[i], 0, 6) - value);
+			lut[i] = ftoi(value);
+			abs_error[i] = abs(itof(lut[i]) - value);
 			rel_error[i] = abs_error[i] / value;
 		}
 	}
