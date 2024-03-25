@@ -7,7 +7,7 @@
 int lut_type = 2, input_bits = 16, output_bits = 16;
 
 string gen_header() {
-    string res = "#STATISTICS\n#ORIGINAL LUTS: {p}\n\n#GROUPED LUTS: 1\n#DEPTH: 1\n#XOR: 0\n#NOT: 0\n#XNOR: 0\n#ASSIGN: 0\n\n";
+    string res = fmt::format("#STATISTICS\n#ORIGINAL LUTS: {}\n\n#GROUPED LUTS: 1\n#DEPTH: 1\n#XOR: 0\n#NOT: 0\n#XNOR: 0\n#ASSIGN: 0\n\n", input_bits);
 
     res += fmt::format("#INPUTS {}\n", input_bits);
     for (int i = 0; i < input_bits; i++) {
@@ -25,10 +25,14 @@ string gen_header() {
 }
 
 string dump_lut(vector<uint64_t> lut) {
+    assert (lut.size() == (1 << input_bits));
     string body = "";
     int c = 0;
     for (int i = 0; i < lut.size(); i++) {
         string input = utils::block(i).to_string().substr(utils::blocksize - input_bits);
+        assert (utils::block(i).to_string().find('1') >= utils::blocksize - input_bits);
+        assert (lut[i] < (1 << output_bits));
+        assert (utils::block(lut[i]).to_string().find('1') >= utils::blocksize - output_bits);
         string output = utils::block(lut[i]).to_string().substr(utils::blocksize - output_bits);
 
         int input_ones = count(input.begin(), input.end(), '1');
