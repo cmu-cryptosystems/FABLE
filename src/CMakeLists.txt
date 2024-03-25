@@ -20,3 +20,8 @@ find_package(OpenMP REQUIRED)
 target_link_libraries(batchlut batchlut-GC fmt::fmt SEAL::seal OpenMP::OpenMP_CXX)
 target_include_directories(batchlut PRIVATE ${PROJECT_SOURCE_DIR}/extern/BatchPIR/header)
 add_compile_definitions(batchlut LUT_OUTPUT_SIZE=${LUT_OUTPUT_SIZE})
+
+add_executable(flutegen "gen_flute_lut.cpp" ${SOURCES})
+target_include_directories(flutegen PRIVATE ${PROJECT_SOURCE_DIR}/extern/BatchPIR/header)
+target_link_libraries(flutegen batchlut-GC fmt::fmt SEAL::seal)
+file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/flute_luts)

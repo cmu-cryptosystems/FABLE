@@ -19,3 +19,7 @@ Then launch
 ```
 
 in 2 terminals. `par` is parallelization flag (1 for parallel computing, 0 for single thread). 
+
+### Generate .lut files for FLUTE
+
+The executable is `./build/bin/flutegen`. Run with `-h` for usage. The output would be saved in `./flute_luts/`

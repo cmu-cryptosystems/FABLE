@@ -1,79 +1,21 @@
+#include "LUT_utils.h"
+
 #include "GC/emp-sh2pc.h"
 #include "GC/deduplicate.h"
 #include "GC/lowmc.h"
 #include "GC/io_utils.h"
-#include <algorithm>
-#include <cstdint>
-#include <cstdlib>
-#include <iostream>
-#include <fmt/core.h>
 #include <omp.h>
-#include <seal/util/defines.h>
 #include <set>
 #include "batchpirserver.h"
 #include "batchpirclient.h"
 
 using namespace sci;
-using std::cout, std::endl, std::vector;
+using std::cout, std::endl, std::vector, std::set;
 
 int party, port = 8000, batch_size = 256, parallel = 1, type = 0, lut_type = 0;
-int db_size = (1 << LUT_OUTPUT_SIZE);
-int bitlength = LUT_OUTPUT_SIZE;
 NetIO *io_gc;
 
-enum LUTType {
-	Random, 
-	Gamma
-};
-
-const int client_id = 0;
-
-void barrier() {
-	bool prepared = false;
-	if (party == BOB) {
-		prepared = true;
-		io_gc->send_data(&prepared, sizeof(prepared));
-	} else {
-		io_gc->recv_data(&prepared, sizeof(prepared));
-		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
-	}
-}
-
-// Convert double to fixed point integer (scale is the upper bound, -scale is the lower bound)
-inline uint64_t ftoi(double x, double scale = 10) {
-	return round(clamp(x / scale, -1., 1.) * (1 << bitlength));
-}
-
-// Convert fixed point integer to double
-inline double itof(uint64_t x, double scale = 10) {
-	return x * scale / (1 << bitlength);
-}
-
-inline vector<uint64_t> get_lut(LUTType lut_typ) {
-	vector<uint64_t> lut(db_size);
-	vector<double> abs_error(db_size, 0);
-	vector<double> rel_error(db_size, 0);
-	
-	for (uint64_t i = 0; i < db_size; i ++) {
-		if (lut_typ == Random)
-			lut[i] = rand() % db_size;
-		else if (lut_typ == Gamma) {
-			double input = (double)i/db_size * 3 + 1; // from 1 to 4
-			double value = std::tgamma(input);
-			lut[i] = ftoi(value);
-			abs_error[i] = abs(itof(lut[i]) - value);
-			rel_error[i] = abs_error[i] / value;
-		}
-	}
-	cout << fmt::format(
-		"LUT built. \nMax Absolute error = {}\nMax Relative error = {}", 
-		*std::max_element(abs_error.begin(), abs_error.end()),
-		*std::max_element(rel_error.begin(), rel_error.end())
-	) << endl;
-	return lut;
-}
-
-void test_lut() {
+void bench_lut() {
 	
 	BatchPirParams params(batch_size, db_size, bitlength / 4, parallel, (BatchPirType)type);
     // params.print_params();
@@ -107,7 +49,7 @@ void test_lut() {
 	int bucket_size = params.get_bucket_size();
 
 	// synchronize
-	barrier();
+	barrier(party, io_gc);
 
 	io_gc->flush();
 	cout << BLUE << "BatchLUT" << RESET << endl;
@@ -359,7 +301,7 @@ void test_lut() {
 		plain_result[i] = result[i].reveal<uint64_t>();
 	}
 	for(int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
-		utils::check(
+		check(
 			plain_result[batch_idx] == lut.at(plain_queries[batch_idx]), 
 			fmt::format("[BatchLUT] Test failed. T[{}]={}, but we get {}. ", plain_queries[batch_idx], lut.at(plain_queries[batch_idx]), plain_result[batch_idx])
 		);
@@ -395,7 +337,7 @@ int main(int argc, char **argv) {
 	auto time_span = time_from(time_start);
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
 	utils::check(type == 0, "Only PIRANA is supported now. "); 
-	test_lut();
+	bench_lut();
 	delete io_gc;
 	return 0;
 }
