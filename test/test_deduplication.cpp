@@ -12,11 +12,12 @@ using namespace sci;
 using std::cout, std::endl;
 
 int party, port = 8000, batch_size = 256;
-int bucket_size = 3 * batch_size / 2;
 int bitlength = 16;
 NetIO *io_gc;
 
 void test_deduplication() {
+
+	int bucket_size = 3 * batch_size / 2;
 
 	BatchLUTConfig config{
 		batch_size, 
@@ -110,7 +111,6 @@ int main(int argc, char **argv) {
 	amap.arg("r", party, "Role of party: ALICE = 1; BOB = 2");
 	amap.arg("p", port, "Port Number");
 	amap.arg("s", batch_size, "number of total elements");
-	amap.arg("b", bucket_size, "number of buckets");
 	amap.arg("l", bitlength, "bitlength of inputs");
 	amap.parse(argc, argv);
 	io_gc = new NetIO(party == ALICE ? nullptr : "127.0.0.1",

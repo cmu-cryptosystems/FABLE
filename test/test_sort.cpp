@@ -1,13 +1,11 @@
 #include "GC/emp-sh2pc.h"
 #include "custom_types.h"
 #include "sort.h"
+#include "GC/io_utils.h"
 #include <cstdint>
-#include <iostream>
-#include <chrono>
 #include <fmt/core.h>
 
 using namespace sci;
-using std::cout, std::endl;
 
 int party, port = 8000, iters = 512, batch_size = 256;
 int bitlength = 32;
@@ -15,23 +13,21 @@ NetIO *io_gc;
 
 void test_sort() {
 	std::vector<uint32_t> plain(batch_size);
+	std::vector<int> plain_test(batch_size);
 	IntegerArray in(batch_size);
 
 // First specify Alice's input
 	for(int i = 0; i < batch_size; ++i) {
 		plain[i] = rand()%(batch_size >> 1);
+		plain_test[i] = plain[i];
 		in[i] = Integer(bitlength, plain[i], ALICE);
 	}
 	
-    auto comm_start = io_gc->counter;
-	auto time_start = clock_start();
-
+	io_gc->flush();
+	start_record(io_gc, "sort");
 	auto swap_map = sort(in, batch_size);
+	end_record(io_gc, "sort");
 
-	auto time_span = time_from(time_start);
-	cout << BLUE << "Sort" << RESET << endl;
-    cout << "elapsed " << time_span / 1000 << " ms." << endl;
-    cout << "sent " << (io_gc->counter - comm_start) / (1.0 * (1ULL << 20)) << " MB" << endl;
 	int max = -1;
 	for(int i = 0; i < batch_size; ++i) {
 		auto res = in[i].reveal<int32_t>();
@@ -40,18 +36,35 @@ void test_sort() {
 		max = res;
 	}
 
-	comm_start = io_gc->counter;
-	time_start = high_resolution_clock::now();
+	IntegerArray in_copy(in);
 
+	start_record(io_gc, "plain_sort");
+	auto plain_swap_map = sort(plain_test, batch_size, BOB);
+	end_record(io_gc, "plain_sort");
+
+	max = -1;
+	for(int i = 0; i < batch_size; ++i) {
+		auto res = plain_test[i];
+		if (max > res)
+			error(fmt::format("{}-th position incorrect!", i).c_str());
+		max = res;
+	}
+
+	start_record(io_gc, "unsort");
 	permute(swap_map, in, true);
+	end_record(io_gc, "unsort");
+	
+	start_record(io_gc, "unsort_plain");
+	permute(plain_swap_map, in_copy, true);
+	end_record(io_gc, "unsort_plain");
 
-	time_span = time_from(time_start);
-	cout << BLUE << "Unsort" << RESET << endl;
-    cout << "elapsed " << time_span / 1000 << " ms." << endl;
-    cout << "sent " << (io_gc->counter - comm_start) / (1.0 * (1ULL << 20)) << " MB" << endl;
 	for(int i = 0; i < batch_size; ++i)
 		if(plain[i] != in[i].reveal<int32_t>())
 			error(fmt::format("{}-th position incorrect! {} != {}", i, plain[i], in[i].reveal<int32_t>()).c_str());
+		
+	for(int i = 0; i < batch_size; ++i)
+		if(plain[i] != in_copy[i].reveal<int32_t>())
+			error(fmt::format("{}-th position incorrect! {} != {}", i, plain[i], in_copy[i].reveal<int32_t>()).c_str());
 
 }
 

@@ -30,6 +30,7 @@ Modified by Deevashwer Rathee
 #include "GC/bit.h"
 #include "custom_types.h"
 #include <tuple>
+#include "io_utils.h"
 
 using std::cout, std::endl;
 namespace sci {
@@ -37,7 +38,7 @@ namespace sci {
 typedef std::tuple<Bit, int, int> CompResultItem;
 class CompResultType: public std::vector<CompResultItem> {
 public:
-  bool recording;
+  std::vector<std::tuple<bool, int, int>> plain_buffer;
 };
 
 inline bool is_power_of_2(int x) {
@@ -95,7 +96,7 @@ inline void show(std::vector<int>& x, string name) {
 
 inline void permute(const CompResultType result, IntegerArray& data, bool inverse = false) {
   if (!inverse) {
-    for (auto [s, i, j] : result) {
+    for (auto &[s, i, j] : result) {
       swap(s, data[i], data[j]);
     }
   } else {
@@ -113,11 +114,11 @@ void cmp_swap(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int 
 void bitonic_merge(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, int party, CompResultType& result);
 void bitonic_sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, int party, CompResultType& result);
 // Sort data, key is the first columns
-CompResultType sort(std::vector<IntegerArray>& data, int size, bool record = true, Bit acc = true);
-CompResultType sort(IntegerArray& data, int size, bool record = true, Bit acc = true);
-CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int size, int party = PUBLIC, bool record = true, bool acc = true);
-CompResultType sort(IntegerArray& data, std::vector<int>& plain_key, int size, int party = PUBLIC, bool record = true, bool acc = true);
-CompResultType sort(std::vector<int>& plain_key, int size, int party = PUBLIC, bool record = true, bool acc = true);
+CompResultType sort(std::vector<IntegerArray>& data, int size, Bit acc = true);
+CompResultType sort(IntegerArray& data, int size, Bit acc = true);
+CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int size, int party = PUBLIC, bool acc = true);
+CompResultType sort(IntegerArray& data, std::vector<int>& plain_key, int size, int party = PUBLIC, bool acc = true);
+CompResultType sort(std::vector<int>& plain_key, int size, int party = PUBLIC, bool acc = true);
 
 } // namespace sci
 #endif
