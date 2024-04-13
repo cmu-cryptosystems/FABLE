@@ -4,3 +4,4 @@ build/
 flute_luts/
 
 *.py
+*.out

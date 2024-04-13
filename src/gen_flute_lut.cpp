@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-int lut_type = 2, input_bits = 16, output_bits = 16, test=false;
+int lut_type = LUTType::Filled, input_bits = 16, output_bits = 16, test=false;
 
 inline std::vector<uint64_t> get_lut_test() {
 	return std::vector<uint64_t>{
