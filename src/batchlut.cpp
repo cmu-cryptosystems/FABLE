@@ -3,7 +3,7 @@
 #include "GC/emp-sh2pc.h"
 #include "GC/deduplicate.h"
 #include "GC/lowmc.h"
-#include "GC/io_utils.h"
+#include "utils/io_utils.h"
 #include <omp.h>
 #include <set>
 #include "batchpirserver.h"

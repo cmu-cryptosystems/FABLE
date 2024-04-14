@@ -1,6 +1,6 @@
 #include "GC/emp-sh2pc.h"
-#include "custom_types.h"
-#include "deduplicate.h"
+#include "GC/custom_types.h"
+#include "GC/deduplicate.h"
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
