@@ -1,6 +1,6 @@
 #include "GC/emp-sh2pc.h"
-#include "io_utils.h"
-#include "lowmc.h"
+#include "utils/io_utils.h"
+#include "GC/lowmc.h"
 #include <iostream>
 #include <chrono>
 #include <fmt/core.h>

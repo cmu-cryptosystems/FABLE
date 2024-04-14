@@ -1,7 +1,7 @@
 #include "GC/emp-sh2pc.h"
-#include "custom_types.h"
-#include "sort.h"
-#include "GC/io_utils.h"
+#include "GC/custom_types.h"
+#include "GC/sort.h"
+#include "utils/io_utils.h"
 #include <cstdint>
 #include <fmt/core.h>
 

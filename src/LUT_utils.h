@@ -6,6 +6,7 @@
 enum LUTType {
 	Random, 
 	Gamma, 
+	Cauchy_dis, 
     Filled, 
     NumLUTTypes
 };
@@ -16,6 +17,8 @@ inline std::string lut_type_to_string(LUTType lut_typ) {
         return "Random";
     else if (lut_typ == Gamma)
         return "Gamma";
+    else if (lut_typ == Cauchy_dis)
+        return "Cauchy_dis";
     else if (lut_typ == Filled)
         return "Filled";
     else
@@ -66,7 +69,15 @@ inline std::vector<uint64_t> get_lut(LUTType lut_typ, int input_bits = bitlength
 			rel_error[i] = abs_error[i] / value;
 		} else if (lut_typ == Filled) {
             lut[i] = range - 1;
-        }
+        } else if (lut_typ == Cauchy_dis) {
+			double input = (double)i/lut_size * 80 - 40; // from -40 to 40
+			double value = 1.0 / (M_PI * (1 + input * input));
+			lut[i] = ftoi(value, range, 0.35);
+			abs_error[i] = abs(itof(lut[i], range, 0.35) - value);
+			rel_error[i] = abs_error[i] / value;
+		} else {
+			assert(false);
+		}
 	}
 	std::cout << fmt::format(
 		"LUT built. \nMax Absolute error = {}\nMax Relative error = {}", 

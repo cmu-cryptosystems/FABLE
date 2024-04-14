@@ -1,6 +1,6 @@
 #include "GC/emp-sh2pc.h"
-#include "subcube_query.h"
-#include "io_utils.h"
+#include "GC/subcube_query.h"
+#include "utils/io_utils.h"
 #include <cassert>
 #include <cmath>
 #include <cstdint>

@@ -1,4 +1,6 @@
+add_subdirectory(utils)
 add_subdirectory(GC)
+add_subdirectory(OT)
 
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/extern/BatchPIR/src/*.cpp")
 list(REMOVE_ITEM SOURCES "${PROJECT_SOURCE_DIR}/extern/BatchPIR/src/main.cpp")

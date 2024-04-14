@@ -3,9 +3,8 @@ add_library(batchlut-GC
     orcompact.cpp
     deduplicate.cpp
     lowmc.cpp
-    subcube_query.cpp
-    io_utils.cpp)
+    subcube_query.cpp)
 target_link_libraries(batchlut-GC
-    PUBLIC SCI-GC  fmt::fmt
+    PUBLIC SCI-GC batchlut-utils fmt::fmt
 )
-target_include_directories(batchlut-GC PUBLIC ${PROJECT_SOURCE_DIR}/src/GC)
+target_include_directories(batchlut-GC PUBLIC ${PROJECT_SOURCE_DIR}/src)

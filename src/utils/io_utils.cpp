@@ -6,21 +6,34 @@
 std::map<string, recordinfo> record; 
 std::map<string, time_point<system_clock, nanoseconds>> start_timestamps;
 
-void start_record(sci::NetIO* io, string tag) {
+void start_record(sci::NetIO* io, std::string tag) {
     recordinfo info;
     info.counter = io->counter;
     info.num_rounds = io->num_rounds;
-    info.num_ands = circ_exec ? circ_exec->num_and() : 0;
     info.start_time = std::chrono::system_clock::now();
     record[tag] = info;
 }
 
-void end_record(sci::NetIO* io, string tag) {
+void end_record(sci::NetIO* io, std::string tag) {
     auto end_time = std::chrono::system_clock::now();
     auto start_time = record[tag].start_time;
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    auto num_ands = circ_exec ? circ_exec->num_and() : 0;
-    std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes in {} rounds, \n    #AND={}. ", tag, duration.count(), io->counter - record[tag].counter, (io->num_rounds - record[tag].num_rounds), num_ands - record[tag].num_ands) << std::endl;
+    std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes in {} rounds. ", tag, duration.count(), io->counter - record[tag].counter, (io->num_rounds - record[tag].num_rounds)) << std::endl;
+    record.erase(tag);
+}
+
+void start_record(coproto::AsioSocket &chl, std::string tag) {
+    recordinfo info;
+    info.counter = chl.bytesSent() + chl.bytesReceived();
+    info.num_rounds = 0;
+    info.start_time = std::chrono::system_clock::now();
+    record[tag] = info;
+}
+void end_record(coproto::AsioSocket &chl, std::string tag) {
+    auto end_time = std::chrono::system_clock::now();
+    auto start_time = record[tag].start_time;
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
+    std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes. ", tag, duration.count(), chl.bytesSent() + chl.bytesReceived() - record[tag].counter) << std::endl;
     record.erase(tag);
 }
 
