@@ -26,11 +26,11 @@ struct SilentOTResultClient {
   BitVector choices;
 };
 struct SilentOTResultServer_N {
-  std::vector<block> messages;
+  std::vector<std::vector<block>> messages;
 };
 struct SilentOTResultClient_N {
-  block message;
-  u64 choices;
+  std::vector<block> message;
+  std::vector<u64> choices;
 };
 
 SilentOTResultServer SilentOT_1_out_of_2_server(u64 numOTs, coproto::AsioSocket& chl, u64 numThreads = 1, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
@@ -39,7 +39,7 @@ SilentOTResultClient SilentOT_1_out_of_2_client(u64 numOTs, coproto::AsioSocket&
 
 
 // 1 out of N = 2^power silent OT
-SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
-SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
+SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
+SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
 
 #endif

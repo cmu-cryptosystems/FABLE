@@ -17,6 +17,7 @@ bool verbose = true;
 int party = 1;
 int batch_size = 256;
 int lut_bitlength = 16;
+int num_threads = 1;
 string address = "127.0.0.1";
 int port = 32000;
 std::random_device rand_div;
@@ -29,6 +30,7 @@ int main(int argc, char **argv) {
   amap.arg("p", port, "Port Number");
   amap.arg("l", lut_bitlength, "Bit Length");
   amap.arg("s", batch_size , "Batch Size");
+  amap.arg("t", num_threads , "#Threads");
   amap.arg("ip", address, "IP Address of server (ALICE)");
   amap.parse(argc, argv);
 
@@ -59,11 +61,8 @@ int main(int argc, char **argv) {
     assert (input[i] < lut_size);
   }
 
-  std::vector<uint32_t> ret;
   start_record(chl, "SPLUT+");
-  for (auto &x : input) {
-    ret.push_back(SPLUT(lut, x, lut_bitlength, lut_bitlength, party, chl));
-  }
+  auto ret = SPLUT(lut, input, lut_bitlength, lut_bitlength, party, chl, num_threads);
   end_record(chl, "SPLUT+");
   cout << "Execution end. " << endl;
 

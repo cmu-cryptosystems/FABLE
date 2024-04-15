@@ -96,43 +96,59 @@ SilentOTResultClient SilentOT_1_out_of_2_client(u64 numOTs, coproto::AsioSocket&
     };
 }
 
-SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type, MultType multType) {
+SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type, MultType multType) {
 
     assert (power <= POWER_MAX);
 
-    auto messages = SilentOT_1_out_of_2_server(power, chl, numThreads, type, multType);
+    auto messages = SilentOT_1_out_of_2_server(numOTs * power, chl, numThreads, type, multType);
 
     u64 size = 1ULL << power;
     SilentOTResultServer_N result;
-    result.messages.resize(size, ZeroBlock);
+    result.messages.resize(numOTs, std::vector<block>(size, ZeroBlock));
 
-    #pragma omp parallel for num_threads(numThreads) if (numThreads > 1)
+    std::vector<block> plain_messages(numOTs * power * 2);
+    std::vector<block> hash_messages(numOTs * power * 2);
+    for (int ot_idx = 0; ot_idx < numOTs * power; ot_idx++) {
+        plain_messages[ot_idx] = messages.messages[ot_idx][0];
+        plain_messages[numOTs * power + ot_idx] = messages.messages[ot_idx][1];
+    }
+    mAesFixedKey.ecbEncBlocks(plain_messages.data(), numOTs * power * 2, hash_messages.data());
     for (int i = 0; i < size; i++) {
         std::bitset<POWER_MAX> bits(i);
-        for (int j = 0; j < power; j++) {
-            result.messages[i] = result.messages[i] ^ mAesFixedKey.ecbEncBlock(messages.messages[j][bits[j]]);
+        #pragma omp simd
+        for (int k = 0; k < numOTs; k++)
+            for (int j = 0; j < power; j++) {
+                result.messages[k][i] = result.messages[k][i] ^ hash_messages[bits[j] * numOTs * power + k * power + j];
+            }
         }
-    }
 
     return result;
 }
 
-SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type, MultType multType) {
+SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type, MultType multType) {
 
     assert (power <= POWER_MAX);
 
-    auto messages = SilentOT_1_out_of_2_client(power, chl, numThreads, type, multType);
+    auto messages = SilentOT_1_out_of_2_client(numOTs * power, chl, numThreads, type, multType);
 
-    std::bitset<POWER_MAX> bits;
-    for (int j = 0; j < power; j++) {
-        bits[j] = messages.choices[j];
-    }
+    std::vector<std::bitset<POWER_MAX>> bits(numOTs);
+    for (int k = 0; k < numOTs; k++)
+        for (int j = 0; j < power; j++)
+            bits[k][j] = messages.choices[k*power+j];
 
     u64 size = 1ULL << power;
-    SilentOTResultClient_N result{ZeroBlock, bits.to_ullong()};
+    SilentOTResultClient_N result{std::vector<block>(numOTs, ZeroBlock)};
 
-    for (int j = 0; j < power; j++) {
-        result.message = result.message ^ mAesFixedKey.ecbEncBlock(messages.messages[j]);
+    std::vector<block> hash_messages(numOTs * power);
+    mAesFixedKey.ecbEncBlocks(messages.messages.data(), numOTs * power, hash_messages.data());
+    #pragma omp simd
+    for (int k = 0; k < numOTs; k++) {
+        for (int j = 0; j < power; j++) {
+            result.message[k] = result.message[k] ^ hash_messages[k*power + j];
+        }
+    }
+    for (int k = 0; k < numOTs; k++) {
+        result.choices.push_back(bits[k].to_ullong());
     }
 
     return result;

@@ -2,4 +2,4 @@
 #include <cstdint>
 #include "coproto/Socket/AsioSocket.h"
 
-uint32_t SPLUT(const std::vector<uint32_t> &T, uint32_t x, int l_out, int l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads = 1);
+std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t> x, int l_out, int l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads = 1);
