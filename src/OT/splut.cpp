@@ -1,3 +1,4 @@
+#include <cryptoTools/Common/Defines.h>
 #include <cstdint>
 #include <fmt/format.h>
 #include <libOTe/TwoChooseOne/ConfigureCode.h>
@@ -7,16 +8,17 @@
 
 std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t> x, int l_out, int l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads) {
 
+  PRNG prng(sysRandomSeed());
+
   auto lut_size = 1ULL << l_in;
   int batch_size = x.size();
 
   std::vector<uint32_t> z(batch_size);
   std::vector<uint32_t> u(batch_size);
-  std::vector<std::vector<uint32_t>> v(batch_size);
+  std::vector<uint32_t> v(lut_size);
   
   for (int b = 0; b < batch_size; b++) {
-    z[b] = rand() % lut_size;
-    v[b].resize(lut_size);
+    z[b] = prng.get<uint32_t>() % lut_size;
   }
 
   if (party == sci::ALICE) {
@@ -26,12 +28,9 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     
     for (int b = 0; b < batch_size; b++) {
       for (int i = 0; i < lut_size; i++) {
-        v[b][i] = T[i ^ x[b]] ^ m[b][i ^ u[b]].get<uint32_t>()[0] ^ z[b];
+        v[i] = T[i ^ x[b]] ^ m[b][i ^ u[b]].get<uint32_t>()[0] ^ z[b];
       }
-    }
-
-    for (int b = 0; b < batch_size; b++) {
-      cp::sync_wait(chl.send(v[b]));
+      cp::sync_wait(chl.send(v));
     }
 
   } else { // party == BOB
@@ -43,11 +42,8 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     cp::sync_wait(chl.send(u));
     
     for (int b = 0; b < batch_size; b++) {
-      cp::sync_wait(chl.recv(v[b]));
-    }
-    
-    for (int b = 0; b < batch_size; b++) {
-      z[b] = v[b][x[b]] ^ ms[b].get<uint32_t>()[0];
+      cp::sync_wait(chl.recv(v));
+      z[b] = v[x[b]] ^ ms[b].get<uint32_t>()[0];
     }
   }
   return z;

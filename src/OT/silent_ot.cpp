@@ -1,7 +1,9 @@
 #include "silent_ot.h"
 #include <bitset>
 
+#include <coproto/Common/macoro.h>
 #include <cryptoTools/Crypto/AES.h>
+#include "utils/io_utils.h"
 
 SilentOTResultServer SilentOT_1_out_of_2_server(u64 numOTs, coproto::AsioSocket& chl, u64 numThreads, SilentBaseType type, MultType multType)
 {
@@ -106,21 +108,24 @@ SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, co
     SilentOTResultServer_N result;
     result.messages.resize(numOTs, std::vector<block>(size, ZeroBlock));
 
-    std::vector<block> plain_messages(numOTs * power * 2);
-    std::vector<block> hash_messages(numOTs * power * 2);
-    for (int ot_idx = 0; ot_idx < numOTs * power; ot_idx++) {
-        plain_messages[ot_idx] = messages.messages[ot_idx][0];
-        plain_messages[numOTs * power + ot_idx] = messages.messages[ot_idx][1];
-    }
-    mAesFixedKey.ecbEncBlocks(plain_messages.data(), numOTs * power * 2, hash_messages.data());
-    for (int i = 0; i < size; i++) {
-        std::bitset<POWER_MAX> bits(i);
-        #pragma omp simd
-        for (int k = 0; k < numOTs; k++)
+    auto prng_seed = sysRandomSeed();
+    cp::sync_wait(chl.send(prng_seed));
+    PRNG prng(prng_seed);
+    std::vector<block> iv_seeds(numOTs);
+    prng.get(iv_seeds.data(), numOTs);
+
+    # pragma omp parallel for if (numThreads > 1) num_threads(numThreads)
+    for (int k = 0; k < numOTs; k++) {
+        PRNG prng_k(iv_seeds[k]);
+        for (int i = 0; i < size; i++) {
+            std::bitset<POWER_MAX> bits(i);
+            std::vector<block> seed;
             for (int j = 0; j < power; j++) {
-                result.messages[k][i] = result.messages[k][i] ^ hash_messages[bits[j] * numOTs * power + k * power + j];
+                seed.push_back(messages.messages[k*power+j][bits[j]]);
             }
+            result.messages[k][i] = AES_CBC(seed, prng_k.get<block>());
         }
+    }
 
     return result;
 }
@@ -131,24 +136,37 @@ SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, co
 
     auto messages = SilentOT_1_out_of_2_client(numOTs * power, chl, numThreads, type, multType);
 
-    std::vector<std::bitset<POWER_MAX>> bits(numOTs);
+    std::vector<std::bitset<POWER_MAX>> selection_bits(numOTs);
     for (int k = 0; k < numOTs; k++)
         for (int j = 0; j < power; j++)
-            bits[k][j] = messages.choices[k*power+j];
+            selection_bits[k][j] = messages.choices[k*power+j];
 
     u64 size = 1ULL << power;
-    SilentOTResultClient_N result{std::vector<block>(numOTs, ZeroBlock)};
-
-    std::vector<block> hash_messages(numOTs * power);
-    mAesFixedKey.ecbEncBlocks(messages.messages.data(), numOTs * power, hash_messages.data());
-    #pragma omp simd
+    SilentOTResultClient_N result{std::vector<block>(numOTs)};
+    
     for (int k = 0; k < numOTs; k++) {
-        for (int j = 0; j < power; j++) {
-            result.message[k] = result.message[k] ^ hash_messages[k*power + j];
+        result.choices.push_back(selection_bits[k].to_ullong());
+    }
+
+    block prng_seed;
+    cp::sync_wait(chl.recv(prng_seed));
+    PRNG prng(prng_seed);
+    std::vector<block> iv_seeds(numOTs);
+    prng.get(iv_seeds.data(), numOTs);
+    std::vector<block> iv(numOTs);
+
+    for (int k = 0; k < numOTs; k++) {
+        PRNG prng_k(iv_seeds[k]);
+        for (int i = 0; i < size; i++) {
+            auto temp = prng_k.get<block>();
+            if (i == result.choices[k]) 
+                iv[k] = temp;
         }
     }
+
     for (int k = 0; k < numOTs; k++) {
-        result.choices.push_back(bits[k].to_ullong());
+        std::vector<block> slice(messages.messages.begin() + k*power, messages.messages.begin() + (k+1)*power);
+        result.message[k] = AES_CBC(slice, iv[k]);
     }
 
     return result;
