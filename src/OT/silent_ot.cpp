@@ -2,6 +2,7 @@
 #include <bitset>
 
 #include <coproto/Common/macoro.h>
+#include <cryptoTools/Common/block.h>
 #include <cryptoTools/Crypto/AES.h>
 #include "utils/io_utils.h"
 
@@ -108,22 +109,24 @@ SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, co
     SilentOTResultServer_N result;
     result.messages.resize(numOTs, std::vector<block>(size, ZeroBlock));
 
-    auto prng_seed = sysRandomSeed();
-    cp::sync_wait(chl.send(prng_seed));
-    PRNG prng(prng_seed);
-    std::vector<block> iv_seeds(numOTs);
-    prng.get(iv_seeds.data(), numOTs);
+    std::vector<std::array<AES, 2>> AESs(numOTs * power); 
 
-    # pragma omp parallel for if (numThreads > 1)
+    # pragma omp parallel for if (numThreads > 1) collapse(2)
     for (int k = 0; k < numOTs; k++) {
-        PRNG prng_k(iv_seeds[k]);
+        for (int j = 0; j < power; j++) {
+            AESs[k*power+j][0].setKey(messages.messages[k*power+j][0]);
+            AESs[k*power+j][1].setKey(messages.messages[k*power+j][1]);
+        }
+    }
+
+    # pragma omp parallel for if (numThreads > 1) collapse(2)
+    for (int k = 0; k < numOTs; k++) {
         for (int i = 0; i < size; i++) {
             std::bitset<POWER_MAX> bits(i);
-            std::vector<block> seed;
+            result.messages[k][i] = ZeroBlock;
             for (int j = 0; j < power; j++) {
-                seed.push_back(messages.messages[k*power+j][bits[j]]);
+               result.messages[k][i] = result.messages[k][i] ^ AESs[k*power+j][bits[j]].ecbEncBlock(block(i));
             }
-            result.messages[k][i] = AES_CBC(seed, prng_k.get<block>());
         }
     }
 
@@ -142,31 +145,18 @@ SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, co
             selection_bits[k][j] = messages.choices[k*power+j];
 
     u64 size = 1ULL << power;
-    SilentOTResultClient_N result{std::vector<block>(numOTs)};
+    SilentOTResultClient_N result{std::vector<block>(numOTs, ZeroBlock)};
     
     for (int k = 0; k < numOTs; k++) {
         result.choices.push_back(selection_bits[k].to_ullong());
     }
 
-    block prng_seed;
-    cp::sync_wait(chl.recv(prng_seed));
-    PRNG prng(prng_seed);
-    std::vector<block> iv_seeds(numOTs);
-    prng.get(iv_seeds.data(), numOTs);
-    std::vector<block> iv(numOTs);
-
+    # pragma omp parallel for if (numThreads > 1)
     for (int k = 0; k < numOTs; k++) {
-        PRNG prng_k(iv_seeds[k]);
-        for (int i = 0; i < size; i++) {
-            auto temp = prng_k.get<block>();
-            if (i == result.choices[k]) 
-                iv[k] = temp;
+        for (int j = 0; j < power; j++) {
+            AES aes(messages.messages[k*power+j]);
+            result.message[k] = result.message[k] ^ aes.ecbEncBlock(block(result.choices[k]));
         }
-    }
-
-    for (int k = 0; k < numOTs; k++) {
-        std::vector<block> slice(messages.messages.begin() + k*power, messages.messages.begin() + (k+1)*power);
-        result.message[k] = AES_CBC(slice, iv[k]);
     }
 
     return result;

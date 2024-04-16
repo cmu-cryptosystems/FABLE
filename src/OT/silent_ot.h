@@ -42,12 +42,4 @@ SilentOTResultClient SilentOT_1_out_of_2_client(u64 numOTs, coproto::AsioSocket&
 SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
 SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type = SilentBaseType::BaseExtend, MultType multType = MultType::ExConv7x24);
 
-inline block AES_CBC(const span<block>& plaintexts, block iv) {
-  block ciphertext = iv;
-  for (auto& plaintext : plaintexts) {
-    ciphertext = mAesFixedKey.ecbEncBlock(plaintext ^ ciphertext);
-  }
-  return ciphertext;
-}
-
 #endif
