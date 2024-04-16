@@ -103,12 +103,15 @@ SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, co
 
     assert (power <= POWER_MAX);
 
+    start_record(chl, "OT");
     auto messages = SilentOT_1_out_of_2_server(numOTs * power, chl, numThreads, type, multType);
+    end_record(chl, "OT");
 
     u64 size = 1ULL << power;
     SilentOTResultServer_N result;
     result.messages.resize(numOTs, std::vector<block>(size, ZeroBlock));
 
+    start_record(chl, "AES");
     std::vector<std::array<AES, 2>> AESs(numOTs * power); 
 
     # pragma omp parallel for if (numThreads > 1) collapse(2)
@@ -129,6 +132,7 @@ SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, co
             }
         }
     }
+    end_record(chl, "AES");
 
     return result;
 }
@@ -137,7 +141,9 @@ SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, co
 
     assert (power <= POWER_MAX);
 
+    start_record(chl, "OT");
     auto messages = SilentOT_1_out_of_2_client(numOTs * power, chl, numThreads, type, multType);
+    end_record(chl, "OT");
 
     std::vector<std::bitset<POWER_MAX>> selection_bits(numOTs);
     for (int k = 0; k < numOTs; k++)
@@ -151,6 +157,7 @@ SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, co
         result.choices.push_back(selection_bits[k].to_ullong());
     }
 
+    start_record(chl, "AES");
     # pragma omp parallel for if (numThreads > 1)
     for (int k = 0; k < numOTs; k++) {
         for (int j = 0; j < power; j++) {
@@ -158,6 +165,7 @@ SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, co
             result.message[k] = result.message[k] ^ aes.ecbEncBlock(block(result.choices[k]));
         }
     }
+    end_record(chl, "AES");
 
     return result;
 }
