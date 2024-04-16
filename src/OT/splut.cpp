@@ -1,5 +1,7 @@
+#include <cryptoTools/Common/BitVector.h>
 #include <cryptoTools/Common/Defines.h>
 #include <cstdint>
+#include <bitset>
 #include <fmt/format.h>
 #include <libOTe/TwoChooseOne/ConfigureCode.h>
 #include <libOTe/TwoChooseOne/TcoOtDefines.h>
@@ -11,14 +13,17 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
   PRNG prng(sysRandomSeed());
 
   auto lut_size = 1ULL << l_in;
+  uint32_t in_mask = (1ULL << l_in) - 1;
+  uint32_t out_mask = (1ULL << l_out) - 1;
   int batch_size = x.size();
 
   std::vector<uint32_t> z(batch_size);
   std::vector<uint32_t> u(batch_size);
   std::vector<uint32_t> v(lut_size);
+  BitVector v_serialized(lut_size * l_out);
   
   for (int b = 0; b < batch_size; b++) {
-    z[b] = prng.get<uint32_t>() % lut_size;
+    z[b] = prng.get<uint32_t>() & out_mask;
   }
 
   if (party == sci::ALICE) {
@@ -28,9 +33,13 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     
     for (int b = 0; b < batch_size; b++) {
       for (int i = 0; i < lut_size; i++) {
-        v[i] = T[i ^ x[b]] ^ m[b][i ^ u[b]].get<uint32_t>()[0] ^ z[b];
+        v[i] = (T[i ^ x[b]] ^ m[b][i ^ u[b]].get<uint32_t>()[0] ^ z[b]) & out_mask;
+        std::bitset<POWER_MAX> blk(v[i]);
+        for (int j = 0; j < l_out; j++) {
+          v_serialized[i * l_out + j] = blk[j];
+        }
       }
-      cp::sync_wait(chl.send(v));
+      cp::sync_wait(chl.send(v_serialized));
     }
 
   } else { // party == BOB
@@ -42,8 +51,15 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     cp::sync_wait(chl.send(u));
     
     for (int b = 0; b < batch_size; b++) {
-      cp::sync_wait(chl.recv(v));
-      z[b] = v[x[b]] ^ ms[b].get<uint32_t>()[0];
+      cp::sync_wait(chl.recv(v_serialized));
+      for (int i = 0; i < lut_size; i++) {
+        std::bitset<POWER_MAX> blk;
+        for (int j = 0; j < l_out; j++) {
+          blk[j] = v_serialized[i * l_out + j];
+        }
+        v[i] = blk.to_ulong();
+      }
+      z[b] = (v[x[b]] ^ ms[b].get<uint32_t>()[0]) & out_mask;
     }
   }
   return z;

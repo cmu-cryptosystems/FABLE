@@ -39,8 +39,7 @@ void test_lowmc() {
 	end_record(io_gc, "total");
 	#endif
 
-	std::bitset<blocksize> ground_truth("1001101011011101110100110000000000000000110110010111100010000100");
-	std::cout << endl;
+	std::bitset<blocksize> ground_truth("0100111110111011111001100100100110101110101101101110101101000111");
 	for (int i=0; i<blocksize; i++) {
 		if (res[i][0].reveal() != ground_truth[i]) {
 			error(fmt::format("{}-th position not align! ", i).c_str());
