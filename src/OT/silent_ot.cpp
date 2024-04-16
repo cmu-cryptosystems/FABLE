@@ -114,7 +114,7 @@ SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, co
     std::vector<block> iv_seeds(numOTs);
     prng.get(iv_seeds.data(), numOTs);
 
-    # pragma omp parallel for if (numThreads > 1) num_threads(numThreads)
+    # pragma omp parallel for if (numThreads > 1)
     for (int k = 0; k < numOTs; k++) {
         PRNG prng_k(iv_seeds[k]);
         for (int i = 0; i < size; i++) {

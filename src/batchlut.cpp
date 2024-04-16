@@ -336,6 +336,7 @@ int main(int argc, char **argv) {
 	setup_semi_honest(io_gc, party);
 	auto time_span = time_from(time_start);
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
+	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, type = {}, lut_type = {}", batch_size, parallel, type, lut_type) << endl;
 	// utils::check(type == 0, "Only PIRANA is supported now. "); 
 	bench_lut();
 	delete io_gc;

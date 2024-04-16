@@ -34,6 +34,8 @@ int main(int argc, char **argv) {
   amap.arg("ip", address, "IP Address of server (ALICE)");
   amap.parse(argc, argv);
 
+  cout << fmt::format("Testing SPLUT with parameters bit_length={}, batch_size={}, num_threads={}", lut_bitlength, batch_size, num_threads) << endl;
+
   auto ip = address+":"+std::to_string(port);
   auto chl = cp::asioConnect(ip, party == ALICE);
 
