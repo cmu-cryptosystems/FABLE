@@ -20,7 +20,6 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
 
   std::vector<uint32_t> z(batch_size);
   std::vector<uint32_t> u(batch_size);
-  std::vector<std::vector<uint32_t>> v(batch_size, std::vector<uint32_t>(lut_size));
   BitVector v_serialized(batch_size * lut_size * l_out);
   
   for (int b = 0; b < batch_size; b++) {
@@ -38,8 +37,8 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     # pragma omp parallel for if (numThreads > 1)
     for (int b = 0; b < batch_size; b++) {
       for (int i = 0; i < lut_size; i++) {
-        v[b][i] = (T[i ^ x[b]] ^ m[b][i ^ u[b]].get<uint32_t>()[0] ^ z[b]) & out_mask;
-        std::bitset<POWER_MAX> blk(v[b][i]);
+        uint32_t v = (T[i ^ x[b]] ^ m[b][i ^ u[b]].get<uint32_t>()[0] ^ z[b]) & out_mask;
+        std::bitset<POWER_MAX> blk(v);
         for (int j = 0; j < l_out; j++) {
           v_serialized[b * (lut_size * l_out) + i * l_out + j] = blk[j];
         }
@@ -73,8 +72,8 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
       for (int j = 0; j < l_out; j++) {
         blk[j] = v_serialized[b * (lut_size * l_out) + x[b] * l_out + j];
       }
-      v[b][x[b]] = blk.to_ulong();
-      z[b] = (v[b][x[b]] ^ ms[b].get<uint32_t>()[0]) & out_mask;
+      uint32_t v = blk.to_ulong();
+      z[b] = (v ^ ms[b].get<uint32_t>()[0]) & out_mask;
     }
     end_record(chl, "Compute v");
   }
