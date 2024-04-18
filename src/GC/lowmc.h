@@ -11,10 +11,10 @@
 
 namespace sci {
 
-const unsigned numofboxes = 4;    // Number of Sboxes
+const unsigned numofboxes = 8;    // Number of Sboxes
 const unsigned blocksize = 64;   // Block size in bits
 const unsigned keysize = 128; // Key size in bits
-const unsigned rounds = 46; // Number of rounds
+const unsigned rounds = 24; // Number of rounds
 
 const unsigned identitysize = blocksize - 3*numofboxes;
                   // Size of the identity part in the Sbox layer
