@@ -28,8 +28,8 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
 
   std::vector<uint32_t> z(batch_size);
   std::vector<uint32_t> u(batch_size);
-  int chunk_size = std::min<int>(batch_size, highestPowerOfTwoIn(total_system_memory * 1.0 / (lut_size * l_out)));
-  BitVector v_serialized(chunk_size * lut_size * l_out);
+  uint64_t chunk_size = std::min<uint64_t>(batch_size, highestPowerOfTwoIn(std::min<uint64_t>(std::numeric_limits<u32>::max(), total_system_memory * 4) / (lut_size * l_out))); // allow v_serialize to use at most half of the memory
+  BitVector v_serialized(chunk_size * lut_size * (uint64_t)l_out);
   
   for (int b = 0; b < batch_size; b++) {
     z[b] = prng.get<uint32_t>() & out_mask;
