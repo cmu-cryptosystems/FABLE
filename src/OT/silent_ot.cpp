@@ -1,5 +1,4 @@
 #include "silent_ot.h"
-#include <bitset>
 
 #include <coproto/Common/macoro.h>
 #include <cryptoTools/Common/block.h>
@@ -137,13 +136,32 @@ SilentOTResultServer_N SilentOT_1_out_of_N_server(u64 numOTs, u64 numThreads, co
     return result;
 }
 
+SilentOTResultServer_N_Compressed SilentOT_1_out_of_N_server_Compressed(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type, MultType multType) {
+
+    assert (power <= POWER_MAX);
+
+    auto messages = SilentOT_1_out_of_2_server(numOTs * power, chl, numThreads, type, multType);
+
+    u64 size = 1ULL << power;
+    SilentOTResultServer_N_Compressed result;
+    result.AESs.resize(numOTs * power);
+
+    for (int k = 0; k < numOTs; k++) {
+        for (int j = 0; j < power; j++) {
+            result.AESs[k*power+j][0].setKey(messages.messages[k*power+j][0]);
+            result.AESs[k*power+j][1].setKey(messages.messages[k*power+j][1]);
+        }
+    }
+    result.power = power;
+
+    return result;
+}
+
 SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, coproto::AsioSocket& chl, uint64_t power, SilentBaseType type, MultType multType) {
 
     assert (power <= POWER_MAX);
 
-    start_record(chl, "OT");
     auto messages = SilentOT_1_out_of_2_client(numOTs * power, chl, numThreads, type, multType);
-    end_record(chl, "OT");
 
     std::vector<std::bitset<POWER_MAX>> selection_bits(numOTs);
     for (int k = 0; k < numOTs; k++)
@@ -157,15 +175,12 @@ SilentOTResultClient_N SilentOT_1_out_of_N_client(u64 numOTs, u64 numThreads, co
         result.choices.push_back(selection_bits[k].to_ullong());
     }
 
-    start_record(chl, "AES");
-    # pragma omp parallel for if (numThreads > 1)
     for (int k = 0; k < numOTs; k++) {
         for (int j = 0; j < power; j++) {
             AES aes(messages.messages[k*power+j]);
             result.message[k] = result.message[k] ^ aes.ecbEncBlock(block(result.choices[k]));
         }
     }
-    end_record(chl, "AES");
 
     return result;
 }

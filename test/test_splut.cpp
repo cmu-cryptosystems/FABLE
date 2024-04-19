@@ -75,13 +75,15 @@ int main(int argc, char **argv) {
     for (int i = 0; i < batch_size; i++) {
         auto recovered_result = ret[i] ^ ret_client[i];
         if (recovered_result != (lut[plain_queries[i]])) {
+          cout << RED << "SPLUT+ test failed" << RESET << endl;
           std::cerr << "Mismatch at " << i << " " << recovered_result << " " << lut[plain_queries[i]] << std::endl;
+          exit(1);
         }
     }
   } else {
     cp::sync_wait(chl.send(ret));
   }
 
-  cout << GREEN << "SPLUT test passed" << RESET << endl;
+  cout << GREEN << "SPLUT+ test passed" << RESET << endl;
 
 }

@@ -40,6 +40,7 @@ std::vector<std::vector<uint32_t>> construct_db(int depth, std::map<uint32_t, ui
 		std::vector<std::vector<uint32_t>> new_buf;
 		auto size = buffer.size();
 		new_buf.resize(size * 3);
+		#pragma omp parallel for
 		for (int j = 0; j < size; j++) {
 		 	std::tie(new_buf[j*3], new_buf[j*3+1], new_buf[j*3+2]) = split_db(buffer[j]);
 		}
@@ -70,14 +71,11 @@ void test_subcube() {
 	auto db = construct_db(depth, lut);
 
 	end_record(io_gc, "Database encoding");
-	// print db
-	// for (size_t i = 0; i < db.size(); i++) {
-	// 	cout << "db[" << i << "]: ";
-	// 	for (size_t j = 0; j < db[i].size(); j++) {
-	// 		cout << db[i][j] << " ";
-	// 	}
-	// 	cout << endl;
-	// }
+	int size = 0;
+	for (auto& b: db) {
+		size += b.capacity();
+	}
+	cout << fmt::format("database size: {} MB. ", size * sizeof(uint32_t) / (1 << 20)) << endl;
 	
 	cout << BLUE << "Subcube query" << RESET << endl;
 	start_record(io_gc, "Subcube query");
