@@ -19,7 +19,7 @@ endif()
 
 
 find_package(OpenMP REQUIRED)
-target_link_libraries(batchlut batchlut-GC fmt::fmt SEAL::seal OpenMP::OpenMP_CXX)
+target_link_libraries(batchlut batchlut-GC fmt::fmt SEAL::seal OpenMP::OpenMP_CXX oc::libOTe)
 target_include_directories(batchlut PRIVATE ${PROJECT_SOURCE_DIR}/extern/BatchPIR/header)
 add_compile_definitions(batchlut LUT_OUTPUT_SIZE=${LUT_OUTPUT_SIZE})
 

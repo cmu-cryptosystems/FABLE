@@ -3,7 +3,8 @@ add_library(batchlut-GC
     orcompact.cpp
     deduplicate.cpp
     lowmc.cpp
-    subcube_query.cpp)
+    subcube_query.cpp
+    aes.cpp)
 target_link_libraries(batchlut-GC
     PUBLIC SCI-GC batchlut-utils fmt::fmt
 )
