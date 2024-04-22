@@ -1,3 +1,4 @@
+#include "splut.h"
 #include <cryptoTools/Common/BitVector.h>
 #include <cryptoTools/Common/Defines.h>
 #include <cstdint>
@@ -16,9 +17,24 @@ inline uint32_t highestPowerOfTwoIn(uint32_t x) {
   return 0x80000000 >> __builtin_clz(x);
 }
 
-std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t> x, int l_out, int l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads) {
+Setup SPLUT_setup(uint32_t batch_size, int l_out, int l_in, int party, string ip, uint64_t numThreads) {
 
-  start_record(chl, "Initialization");
+  Setup results;
+  auto chl = cp::asioConnect(ip, party == sci::ALICE);
+
+  if (party == sci::ALICE) {
+    results.server = SilentOT_1_out_of_N_server_Compressed(batch_size, numThreads, chl, l_in);
+  } else { // party == BOB
+    results.client = SilentOT_1_out_of_N_client(batch_size, numThreads, chl, l_in);
+  }
+  results.bytes_transferred = chl.bytesSent() + chl.bytesReceived();
+
+  return results;
+}
+
+std::vector<uint32_t> SPLUT(Setup& setup, const std::vector<uint32_t> &T, std::vector<uint32_t> x, int l_out, int l_in, int party, sci::NetIO* io, string ip, uint64_t numThreads) {
+
+  start_record(io, "Initialization");
   PRNG prng(sysRandomSeed());
 
   auto lut_size = 1ULL << l_in;
@@ -28,23 +44,23 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
 
   std::vector<uint32_t> z(batch_size);
   std::vector<uint32_t> u(batch_size);
-  uint64_t chunk_size = std::min<uint64_t>(batch_size, highestPowerOfTwoIn(std::min<uint64_t>(1ULL << (32 + 6), total_system_memory * 4) / (lut_size * l_out))); // allow v_serialize to use at most half of the memory
-  BitVector v_serialized(chunk_size * lut_size * (uint64_t)l_out);
+  uint64_t chunk_size = std::min<uint64_t>(batch_size, highestPowerOfTwoIn(total_system_memory * 8 * 0.95 / (lut_size * l_out))); // allow v_serialize to use at most half of the memory
+  cout << "Num Chunks = " << batch_size / chunk_size << endl;
+  BitVector v_serialized(chunk_size * lut_size * (uint64_t)l_out); 
   
   for (int b = 0; b < batch_size; b++) {
     z[b] = prng.get<uint32_t>() & out_mask;
   }
-  end_record(chl, "Initialization");
+  end_record(io, "Initialization");
 
   if (party == sci::ALICE) {
-    start_record(chl, "Setup Phase");
-    auto result = SilentOT_1_out_of_N_server_Compressed(batch_size, numThreads, chl, l_in);
-    end_record(chl, "Setup Phase");
+    auto result = setup.server;
     
-    start_record(chl, "Online Phase");
-    cp::sync_wait(chl.recv(u));
+    start_record(io, "Online Phase");
+    io->recv_data(u.data(), u.size() * sizeof(uint32_t));
     
     for (int chunk_idx = 0; chunk_idx < batch_size / chunk_size; chunk_idx++) {
+      // int c_range = std::min(batch_size - chunk_idx * chunk_size, chunk_size);
       # pragma omp parallel for if (numThreads > 1) collapse(2)
       for (int c = 0; c < chunk_size; c++) {
         for (int i = 0; i < lut_size; i++) {
@@ -57,23 +73,25 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
           }
         }
       }
-      cp::sync_wait(chl.send(v_serialized.getSpan<uint64_t>()));
+      auto to_sent = v_serialized.getSpan<uint64_t>();
+      io->send_data(to_sent.data(), to_sent.size() * sizeof(uint64_t));
     }
-    end_record(chl, "Online Phase");
+    end_record(io, "Online Phase");
 
   } else { // party == BOB
-    start_record(chl, "Setup Phase");
-    auto [ms, s] = SilentOT_1_out_of_N_client(batch_size, numThreads, chl, l_in);
-    end_record(chl, "Setup Phase");
+    auto [ms, s] = setup.client;
 
-    start_record(chl, "Online Phase");
+    start_record(io, "Online Phase");
+    // The vector u doesn't need that much space to store. For simplicity we just use vector<u32> for it, as it is not the bottleneck. 
     for (int b = 0; b < batch_size; b++) {
       u[b] = x[b] ^ s[b];
     }
-    cp::sync_wait(chl.send(u));
+    io->send_data(u.data(), u.size() * sizeof(uint32_t));
     
     for (int chunk_idx = 0; chunk_idx < batch_size / chunk_size; chunk_idx++) {
-      cp::sync_wait(chl.recv(v_serialized.getSpan<uint64_t>()));
+      auto to_recv = v_serialized.getSpan<uint64_t>();
+      io->recv_data(to_recv.data(), to_recv.size() * sizeof(uint64_t));
+      
       for (int c = 0; c < chunk_size; c++) {
         int b = chunk_idx * chunk_size + c;
         std::bitset<POWER_MAX> blk;
@@ -84,9 +102,8 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
         z[b] = (v ^ ms[b].get<uint32_t>()[0]) & out_mask;
       }
     }
-    end_record(chl, "Online Phase");
+    end_record(io, "Online Phase");
   }
-  
-  cp::sync_wait(chl.flush());
+
   return z;
 }
