@@ -3,7 +3,10 @@
 #include "GC/emp-sh2pc.h"
 #include "GC/deduplicate.h"
 #include "GC/lowmc.h"
-#include "GC/io_utils.h"
+#include "GC/aes.h"
+#include "utils/io_utils.h"
+#include <cassert>
+#include <cstdint>
 #include <omp.h>
 #include <set>
 #include "batchpirserver.h"
@@ -12,19 +15,28 @@
 using namespace sci;
 using std::cout, std::endl, std::vector, std::set;
 
-int party, port = 8000, batch_size = 256, parallel = 1, type = 0, lut_type = 0;
+int party, port = 8000, batch_size = 256, parallel = 1, type = 0, lut_type = 0, hash_type = 0;
 NetIO *io_gc;
+
+template<size_t size>
+Integer share_bitset(std::bitset<size> bits, int party) {
+	Integer res(size, 0);
+	for (int i = 0; i < size; i++) {
+		res[i] = Bit(bits[i], party);
+	}
+	return res;
+}
 
 void bench_lut() {
 	
-	BatchPirParams params(batch_size, parallel, (BatchPirType)type);
+	BatchPirParams params(batch_size, parallel, (BatchPirType)type, (HashType)hash_type);
     // params.print_params();
 
 	BatchLUTConfig config{
 		batch_size, 
 		(int)params.get_bucket_size(), 
 		DatabaseConstants::DBSize, 
-		bitlength + 1
+		bitlength// + 1
 	};
 
 	// preparing queries
@@ -55,12 +67,28 @@ void bench_lut() {
 	cout << BLUE << "BatchLUT" << RESET << endl;
 	start_record(io_gc, "BatchLUT");
 	
-    vector<keyblock> keys(w); 
-    vector<prefixblock> prefixes(w); 
+    osuCrypto::PRNG prng(osuCrypto::sysRandomSeed());
+
+    vector<keyblock> lowmc_keys(w); 
+    vector<prefixblock> lowmc_prefixes(w); 
+    vector<oc::block> aes_keys(w);
+    vector<std::bitset<128-DatabaseConstants::InputLength>> aes_prefixes(w);
 	if (party == ALICE) {
-		for (size_t hash_idx = 0; hash_idx < w; hash_idx++) {
-			keys[hash_idx] = random_bitset<utils::keysize>();
-			prefixes[hash_idx] = random_bitset<utils::prefixsize>();
+		if (hash_type == HashType::LowMC) {
+			for (size_t i = 0; i < NumHashFunctions; i++) {
+				lowmc_keys[i] = random_bitset<utils::keysize>(&prng);
+				lowmc_prefixes[i] = random_bitset<utils::prefixsize>(&prng);
+			}
+		} else {
+			for (size_t i = 0; i < NumHashFunctions; i++) {
+				aes_keys[i] = prng.get<oc::block>();
+				aes_prefixes[i] = random_bitset<128-DatabaseConstants::InputLength>(&prng);
+			}
+			auto message_string = concatenate(aes_prefixes[0], rawinputblock(plain_queries[0])).to_string();
+			uint64_t high_half = std::bitset<64>(message_string.substr(0, 64)).to_ullong();
+			uint64_t low_half = std::bitset<64>(message_string.substr(64)).to_ullong();
+			oc::block message(high_half, low_half);
+			auto c = oc::AES(aes_keys[0]).ecbEncBlock(message).get<uint64_t>();
 		}
 	}
 
@@ -72,37 +100,68 @@ void bench_lut() {
 	// prepare batch
 	start_record(io_gc, "Batch Preparation");
     vector<vector<string>> batch(batch_size, vector<string>(w));
-	vector<sci::LowMC> ciphers_2PC;
-	for (int hash_idx = 0; hash_idx < w; hash_idx++) {
-		ciphers_2PC.emplace_back(sci::LowMC(keys[hash_idx], ALICE, batch_size));
-	}
+	vector<sci::LowMC> lowmc_ciphers_2PC;
+	vector<sci::AES> aes_ciphers_2PC;
 
-	vector<secret_block> m(w);
-	for (int hash_idx = 0; hash_idx < w; hash_idx++) {	
-		Integer secret_prefix(prefixsize, prefixes[hash_idx].to_ullong(), ALICE);
-		for (int j = 0; j < sci::blocksize; j++) {
-			m[hash_idx][j].bits.resize(batch_size);
-			if (j >= bitlength+1) {
-				m[hash_idx][j].bits.assign(batch_size, secret_prefix[j-bitlength-1]);
-			} else {
-				for (int i = 0; i < batch_size; i++) {
-					m[hash_idx][j][i] = secret_queries[i][j];
+	if (hash_type == HashType::LowMC) {
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
+			lowmc_ciphers_2PC.emplace_back(sci::LowMC(lowmc_keys[hash_idx], ALICE, batch_size));
+		}
+
+		vector<secret_block> m(w);
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {	
+			Integer secret_prefix = share_bitset(lowmc_prefixes[hash_idx], ALICE);
+			for (int j = 0; j < sci::blocksize; j++) {
+				m[hash_idx][j].bits.resize(batch_size);
+				if (j >= bitlength+1) {
+					m[hash_idx][j].bits.assign(batch_size, secret_prefix[j-bitlength-1]);
+				} else {
+					for (int i = 0; i < batch_size; i++) {
+						m[hash_idx][j][i] = secret_queries[i][j];
+					}
 				}
 			}
 		}
-	}
 
-	vector<secret_block> c(w);
-	for (int hash_idx = 0; hash_idx < w; hash_idx++) {
-		c[hash_idx] = ciphers_2PC[hash_idx].encrypt(m[hash_idx]); // blocksize, batchsize
-	}
-	for (int hash_idx = 0; hash_idx < w; hash_idx++) {
-    	for (int i = 0; i < batch_size; i++) {
-			block hash_out;
-			for (int j = 0; j < sci::blocksize; j++) {
-				hash_out[j] = c[hash_idx][j][i].reveal(BOB);
+		vector<secret_block> c(w);
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
+			c[hash_idx] = lowmc_ciphers_2PC[hash_idx].encrypt(m[hash_idx]); // blocksize, batchsize
+		}
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
+			for (int i = 0; i < batch_size; i++) {
+				block hash_out;
+				for (int j = 0; j < sci::blocksize; j++) {
+					hash_out[j] = c[hash_idx][j][i].reveal(BOB);
+				}
+				batch[i][hash_idx] = hash_out.to_string();
 			}
-			batch[i][hash_idx] = hash_out.to_string();
+		}
+	} else {
+		vector<vector<Integer>> m(w, vector<Integer>(batch_size));
+		vector<vector<Integer>> c(w);
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
+			Integer key(128, 0);
+			auto data = aes_keys[hash_idx].get<uint64_t>();
+			auto key_bitset = concatenate(std::bitset<64>(data[1]), std::bitset<64>(data[0]));
+			for (int i = 0; i < 128; i++) {
+				key[i] = Bit(key_bitset[i], ALICE);
+			}
+			aes_ciphers_2PC.emplace_back(sci::AES(key));
+		}
+		for (int hash_idx = 0; hash_idx < w; hash_idx++) {	
+			Integer secret_prefix = share_bitset(aes_prefixes[hash_idx], ALICE);
+			for (int j = 0; j < batch_size; j++) {
+				m[hash_idx][j] = secret_queries[j];
+				m[hash_idx][j].bits.insert(m[hash_idx][j].bits.end(), secret_prefix.bits.begin(), secret_prefix.bits.end());
+			}
+			c[hash_idx] = aes_ciphers_2PC[hash_idx].EncryptECB(m[hash_idx]);
+			for (int i = 0; i < batch_size; i++) {
+				std::bitset<128> hash_out;
+				for (int j = 0; j < 128; j++) {
+					hash_out[j] = c[hash_idx][i][j].reveal(BOB);
+				}
+				batch[i][hash_idx] = hash_out.to_string();
+			}
 		}
 	}
 	end_record(io_gc, "Batch Preparation");
@@ -203,9 +262,15 @@ void bench_lut() {
 			}
 		}
 	} else {
-		batch_server = new BatchPIRServer(params);
+		batch_server = new BatchPIRServer(params, prng);
 		batch_server->populate_raw_db(generator);
-		batch_server->initialize(keys, prefixes);
+		
+		if (params.get_hash_type() == HashType::LowMC) {
+			batch_server->lowmc_prepare(lowmc_keys, lowmc_prefixes);
+		} else {
+			batch_server->aes_prepare(aes_keys, aes_prefixes);
+		}
+		batch_server->initialize();
 
 		uint32_t glk_size, rlk_size;
 		io_gc->recv_data(&glk_size, sizeof(uint32_t));
@@ -328,6 +393,7 @@ int main(int argc, char **argv) {
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
 	amap.arg("t", type, "0 = PIRANA; 1 = UIUC");
 	amap.arg("l", lut_type, "0 = Random LUT; 1 = Gamma LUT");
+	amap.arg("h", hash_type, "0 = LowMC; 1 = AES");
 	amap.parse(argc-1, argv+1);
 	io_gc = new NetIO(party == ALICE ? nullptr : argv[1],
 						port + GC_PORT_OFFSET, true);
@@ -336,6 +402,7 @@ int main(int argc, char **argv) {
 	setup_semi_honest(io_gc, party);
 	auto time_span = time_from(time_start);
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
+	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, type = {}, lut_type = {}, hash_type = {}", batch_size, parallel, type, lut_type, hash_type) << endl;
 	// utils::check(type == 0, "Only PIRANA is supported now. "); 
 	bench_lut();
 	delete io_gc;

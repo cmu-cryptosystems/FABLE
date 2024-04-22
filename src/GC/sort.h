@@ -30,7 +30,7 @@ Modified by Deevashwer Rathee
 #include "GC/bit.h"
 #include "custom_types.h"
 #include <tuple>
-#include "io_utils.h"
+#include "utils/io_utils.h"
 
 using std::cout, std::endl;
 namespace sci {

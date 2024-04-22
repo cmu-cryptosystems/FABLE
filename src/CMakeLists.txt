@@ -1,4 +1,6 @@
+add_subdirectory(utils)
 add_subdirectory(GC)
+add_subdirectory(OT)
 
 file(GLOB SOURCES "${PROJECT_SOURCE_DIR}/extern/BatchPIR/src/*.cpp")
 list(REMOVE_ITEM SOURCES "${PROJECT_SOURCE_DIR}/extern/BatchPIR/src/main.cpp")
@@ -17,7 +19,7 @@ endif()
 
 
 find_package(OpenMP REQUIRED)
-target_link_libraries(batchlut batchlut-GC fmt::fmt SEAL::seal OpenMP::OpenMP_CXX)
+target_link_libraries(batchlut batchlut-GC fmt::fmt SEAL::seal OpenMP::OpenMP_CXX oc::libOTe)
 target_include_directories(batchlut PRIVATE ${PROJECT_SOURCE_DIR}/extern/BatchPIR/header)
 add_compile_definitions(batchlut LUT_OUTPUT_SIZE=${LUT_OUTPUT_SIZE})
 

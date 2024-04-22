@@ -29,6 +29,7 @@ if (NOT DEFINED LUT_OUTPUT_SIZE)
 endif()
 
 find_package(FMT REQUIRED)
+find_package(libOTe REQUIRED)
 
 add_subdirectory(src)
 add_subdirectory(test)

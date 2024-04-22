@@ -1,6 +1,6 @@
 #include "GC/emp-sh2pc.h"
-#include "io_utils.h"
-#include "lowmc.h"
+#include "utils/io_utils.h"
+#include "GC/lowmc.h"
 #include <iostream>
 #include <chrono>
 #include <fmt/core.h>
@@ -8,7 +8,7 @@
 using namespace sci;
 using std::cout, std::endl;
 
-#define BENCH_EACH 0
+#define BENCH_EACH 1
 
 int party, port = 8000, size = 256;
 NetIO *io_gc;
@@ -20,6 +20,7 @@ void test_lowmc() {
 		m[i] = Integer(size, 0, BOB);
 	}
 	
+	auto num_ands = circ_exec->num_and();
 	#if BENCH_EACH
 	start_record(io_gc, "construction");
 	#else
@@ -29,7 +30,8 @@ void test_lowmc() {
 	LowMC cipher(1, ALICE, size);
 	#if BENCH_EACH
 	end_record(io_gc, "construction");
-
+  	std::cout << fmt::format("#AND Gates = {}", (circ_exec->num_and() - num_ands) / 2) << std::endl;
+	num_ands = circ_exec->num_and();
 	start_record(io_gc, "encrypt");
 	#endif
 	auto res = cipher.encrypt(m);
@@ -38,9 +40,9 @@ void test_lowmc() {
 	#else
 	end_record(io_gc, "total");
 	#endif
+  	std::cout << fmt::format("#AND Gates = {}", (circ_exec->num_and() - num_ands) / 2) << std::endl;
 
-	std::bitset<blocksize> ground_truth("1001101011011101110100110000000000000000110110010111100010000100");
-	std::cout << endl;
+	std::bitset<blocksize> ground_truth("0001111000001000101100110110010110100000000010011101011010110000");
 	for (int i=0; i<blocksize; i++) {
 		if (res[i][0].reveal() != ground_truth[i]) {
 			error(fmt::format("{}-th position not align! ", i).c_str());

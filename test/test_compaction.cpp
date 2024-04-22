@@ -1,6 +1,6 @@
 #include "GC/emp-sh2pc.h"
-#include "custom_types.h"
-#include "orcompact.h"
+#include "GC/custom_types.h"
+#include "GC/orcompact.h"
 #include <cstdlib>
 #include <iostream>
 #include <chrono>
