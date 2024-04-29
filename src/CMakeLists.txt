@@ -10,7 +10,7 @@ find_package(SEAL 4.1 QUIET PATHS "${PROJECT_SOURCE_DIR}/build/seal_4_1" NO_DEFA
 
 if (NOT SEAL_FOUND)
     message(STATUS "clone and install SEAL locally")
-    execute_process(COMMAND ${CMAKE_COMMAND} -E env CC=clang CXX=clang++ ${CMAKE_COMMAND} -S . -B ${PROJECT_SOURCE_DIR}/extern/SEAL/build -DCMAKE_INSTALL_PREFIX=${PROJECT_SOURCE_DIR}/build/seal_4_1
+    execute_process(COMMAND ${CMAKE_COMMAND} -E env CC=clang CXX=clang++ ${CMAKE_COMMAND} -S . -B ${PROJECT_SOURCE_DIR}/extern/SEAL/build -DSEAL_USE_GAUSSIAN_NOISE=ON -DCMAKE_INSTALL_PREFIX=${PROJECT_SOURCE_DIR}/build/seal_4_1
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/SEAL")
     execute_process(COMMAND ${CMAKE_COMMAND} --build ./build --target install --parallel
         WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/extern/SEAL")
