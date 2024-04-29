@@ -11,6 +11,7 @@ macro (add_test_float _name)
 endmacro()
 
 add_GC_test(sort)
+add_GC_test(dpf_cmp)
 add_GC_test(compaction)
 add_GC_test(deduplication)
 add_GC_test(lowmc)
