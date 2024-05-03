@@ -8,6 +8,7 @@ using namespace sci;
 
 int party, port = 8000, size = 512, batch_size = 256;
 int bitlength = 10;
+string address = "127.0.0.1";
 NetIO *io_gc;
 
 inline IntegerArray get_pool(int size) {
@@ -71,9 +72,9 @@ int main(int argc, char **argv) {
 	amap.arg("p", port, "Port Number");
 	amap.arg("s", batch_size, "number of total elements");
 	amap.arg("l", bitlength, "bitlength of inputs");
+  	amap.arg("ip", address, "IP Address of server (ALICE)");
 	amap.parse(argc, argv);
-
-	io_gc = new NetIO(party == ALICE ? nullptr : "127.0.0.1",
+	io_gc = new NetIO(party == ALICE ? nullptr : address.c_str(),
 						port + GC_PORT_OFFSET, true);
 
 	setup_semi_honest(io_gc, party);
