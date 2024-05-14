@@ -15,7 +15,7 @@
 using namespace sci;
 using std::cout, std::endl, std::vector, std::set;
 
-int party, port = 8000, batch_size = 256, parallel = 1, type = 0, lut_type = 0, hash_type = 0;
+int party, port = 8000, batch_size = 256, parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0;
 NetIO *io_gc;
 
 template<size_t size>
@@ -29,14 +29,14 @@ Integer share_bitset(std::bitset<size> bits, int party) {
 
 void bench_lut() {
 	
-	BatchPirParams params(batch_size, parallel, (BatchPirType)type, (HashType)hash_type);
+	BatchPirParams params(batch_size, parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
     // params.print_params();
 
 	BatchLUTConfig config{
 		batch_size, 
 		(int)params.get_bucket_size(), 
 		DatabaseConstants::DBSize, 
-		bitlength// + 1
+		LUT_INPUT_SIZE
 	};
 
 	// preparing queries
@@ -45,8 +45,8 @@ void bench_lut() {
 	vector<uint64_t> lut = get_lut((LUTType)lut_type);
 
     for (int i = 0; i < batch_size; i++) {
-        plain_queries[i] = rand() % DatabaseConstants::DBSize;
-		secret_queries[i] = Integer(DatabaseConstants::InputLength, plain_queries[i], BOB);
+        plain_queries[i] = (i < batch_size / 2) ? rand() % DatabaseConstants::DBSize : plain_queries[rand() % (batch_size / 2)]; // Force duplicates. 
+		secret_queries[i] = Integer(DatabaseConstants::InputLength + 1, plain_queries[i], BOB);
 	}
 
 	auto generator = [lut](size_t i){return rawdatablock(lut.at(i)); };
@@ -79,7 +79,7 @@ void bench_lut() {
 			lowmc_prefix = 0; // random_bitset<utils::prefixsize>(&prng);
 		} else {
 			aes_key = prng.get<oc::block>();
-			aes_prefix = random_bitset<128-DatabaseConstants::InputLength>(&prng);
+			aes_prefix = 0; // random_bitset<128-DatabaseConstants::InputLength>(&prng);
 			auto message_string = concatenate(aes_prefix, rawinputblock(plain_queries[0])).to_string();
 			uint64_t high_half = std::bitset<64>(message_string.substr(0, 64)).to_ullong();
 			uint64_t low_half = std::bitset<64>(message_string.substr(64)).to_ullong();
@@ -106,7 +106,7 @@ void bench_lut() {
 		// Integer secret_prefix = share_bitset(lowmc_prefix, ALICE);
 		for (int j = 0; j < sci::blocksize; j++) {
 			m[j].bits.resize(batch_size);
-			if (j >= bitlength+1) {
+			if (j >= LUT_INPUT_SIZE+1) {
 				m[j].bits.assign(batch_size, Bit(0));
 				// m[j].bits.assign(batch_size, secret_prefix[j-bitlength-1]);
 			} else {
@@ -218,8 +218,8 @@ void bench_lut() {
 
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
-				A_index[hash_idx][bucket_idx] = Integer(bitlength+1, 0, ALICE);
-				A_entry[hash_idx][bucket_idx] = Integer(bitlength, 0, ALICE);
+				A_index[hash_idx][bucket_idx] = Integer(LUT_INPUT_SIZE+1, 0, ALICE);
+				A_entry[hash_idx][bucket_idx] = Integer(LUT_OUTPUT_SIZE, 0, ALICE);
 			}
 		}
 
@@ -295,8 +295,8 @@ void bench_lut() {
 		
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
-				A_index[hash_idx][bucket_idx] = Integer(bitlength+1, batch_server->index_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
-				A_entry[hash_idx][bucket_idx] = Integer(bitlength, batch_server->entry_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
+				A_index[hash_idx][bucket_idx] = Integer(LUT_INPUT_SIZE+1, batch_server->index_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
+				A_entry[hash_idx][bucket_idx] = Integer(LUT_OUTPUT_SIZE, batch_server->entry_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
 			}
 		}
 
@@ -324,11 +324,11 @@ void bench_lut() {
 	}
 
 	// Collect result
-	auto zero_index = Integer(bitlength+1, 0);
+	auto zero_index = Integer(LUT_INPUT_SIZE+1, 0);
 	secret_queries.resize(num_bucket, zero_index);
 	permute(sort_res, secret_queries);
 
-	auto zero_entry = Integer(bitlength, 0);
+	auto zero_entry = Integer(LUT_OUTPUT_SIZE, 0);
 	IntegerArray result(num_bucket, zero_entry);
 	for(int bucket_idx = 0; bucket_idx < num_bucket; ++bucket_idx) {
 		auto selected_query = secret_queries[bucket_idx];
@@ -378,6 +378,7 @@ int main(int argc, char **argv) {
 	amap.arg("p", port, "Port Number");
 	amap.arg("s", batch_size, "number of total elements");
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
+	amap.arg("thr", num_threads, "number of threads");
 	amap.arg("t", type, "0 = PIRANA; 1 = UIUC");
 	amap.arg("l", lut_type, "0 = Random LUT; 1 = Gamma LUT");
 	amap.arg("h", hash_type, "0 = LowMC; 1 = AES");

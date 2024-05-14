@@ -26,8 +26,7 @@ inline std::string lut_type_to_string(LUTType lut_typ) {
 }
 
 const int client_id = 0;
-const int db_size = (1 << LUT_OUTPUT_SIZE);
-const int bitlength = LUT_OUTPUT_SIZE;
+const uint64_t db_size = (1 << LUT_INPUT_SIZE);
 
 inline void barrier(int party, sci::NetIO* io_gc) {
 	bool prepared = false;
@@ -41,25 +40,25 @@ inline void barrier(int party, sci::NetIO* io_gc) {
 }
 
 // Convert double to fixed point representation (scale x from [0, input_range) to [0, fixedpoint_range), then truncate the fractional part)
-inline uint64_t ftoi(double x, int fixedpoint_range = db_size, double input_range = 10) {
+inline uint64_t ftoi(double x, long double fixedpoint_range = db_size, double input_range = 10) {
 	return std::round(std::clamp(x / input_range, -1., 1.) * fixedpoint_range);
 }
 
 // Convert fixed point representation to double
-inline double itof(uint64_t x, int fixedpoint_range = db_size, double input_range = 10) {
+inline double itof(uint64_t x, long double fixedpoint_range = db_size, double input_range = 10) {
 	return x * input_range / fixedpoint_range;
 }
 
-inline std::vector<uint64_t> get_lut(LUTType lut_typ, int input_bits = bitlength, int output_bits = bitlength) {
-    int lut_size = 1 << input_bits;
-    int range = 1 << output_bits;
+inline std::vector<uint64_t> get_lut(LUTType lut_typ, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
+    uint64_t lut_size = 1 << input_bits;
+    long double range = pow(2.0L, output_bits);
 	std::vector<uint64_t> lut(lut_size);
 	std::vector<double> abs_error(lut_size, 0);
 	std::vector<double> rel_error(lut_size, 0);
 	
 	for (uint64_t i = 0; i < lut_size; i ++) {
 		if (lut_typ == Random) {
-			lut[i] = rand() % range;
+			lut[i] = rand() % (uint64_t)range;
         } else if (lut_typ == Gamma) {
 			double input = (double)i/lut_size * 3 + 1; // from 1 to 4
 			double value = std::tgamma(input);
