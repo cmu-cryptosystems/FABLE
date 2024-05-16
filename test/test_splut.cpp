@@ -63,9 +63,7 @@ int main(int argc, char **argv) {
     assert (input[i] < lut_size);
   }
 
-  start_record(chl, "SPLUT+");
   auto ret = SPLUT(lut, input, lut_bitlength, lut_bitlength, party, chl, num_threads);
-  end_record(chl, "SPLUT+");
   cout << "Execution end. " << endl;
 
   // Verify

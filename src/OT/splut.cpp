@@ -18,7 +18,6 @@ inline uint32_t highestPowerOfTwoIn(uint32_t x) {
 
 std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t> x, uint64_t l_out, uint64_t l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads) {
 
-  start_record(chl, "Initialization");
   PRNG prng(sysRandomSeed());
 
   auto lut_size = 1ULL << l_in;
@@ -34,8 +33,8 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
   for (int b = 0; b < batch_size; b++) {
     z[b] = prng.get<uint32_t>() & out_mask;
   }
-  end_record(chl, "Initialization");
 
+  start_record(chl, "SPLUT+");
   if (party == sci::ALICE) {
     start_record(chl, "Setup Phase");
     auto result = SilentOT_1_out_of_N_server_Compressed(batch_size, numThreads, chl, l_in);
@@ -86,6 +85,7 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     }
     end_record(chl, "Online Phase");
   }
+  end_record(chl, "SPLUT+");
   
   cp::sync_wait(chl.flush());
   return z;
