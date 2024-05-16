@@ -16,7 +16,7 @@ inline uint32_t highestPowerOfTwoIn(uint32_t x) {
   return 0x80000000 >> __builtin_clz(x);
 }
 
-std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t> x, int l_out, int l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads) {
+std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t> x, uint64_t l_out, uint64_t l_in, int party, coproto::AsioSocket& chl, uint64_t numThreads) {
 
   start_record(chl, "Initialization");
   PRNG prng(sysRandomSeed());
@@ -29,7 +29,7 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
   std::vector<uint32_t> z(batch_size);
   std::vector<uint32_t> u(batch_size);
   uint64_t chunk_size = std::min<uint64_t>(batch_size, highestPowerOfTwoIn(std::min<uint64_t>(std::numeric_limits<u32>::max(), total_system_memory * 4) / (lut_size * l_out))); // allow v_serialize to use at most half of the memory
-  BitVector v_serialized(chunk_size * lut_size * (uint64_t)l_out);
+  BitVector v_serialized(chunk_size * lut_size * l_out);
   
   for (int b = 0; b < batch_size; b++) {
     z[b] = prng.get<uint32_t>() & out_mask;
