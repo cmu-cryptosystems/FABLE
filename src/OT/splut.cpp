@@ -45,7 +45,7 @@ std::vector<uint32_t> SPLUT(const std::vector<uint32_t> &T, std::vector<uint32_t
     cp::sync_wait(chl.recv(u));
     
     for (int chunk_idx = 0; chunk_idx < batch_size / chunk_size; chunk_idx++) {
-      # pragma omp parallel for if (numThreads > 1) collapse(2)
+      # pragma omp parallel for collapse(2) num_threads(numThreads)
       for (int c = 0; c < chunk_size; c++) {
         for (int i = 0; i < lut_size; i++) {
           int b = chunk_idx * chunk_size + c;
