@@ -370,8 +370,6 @@ void bench_lut() {
 }
 
 int main(int argc, char **argv) {
-
-	cout << "Maximum #threads = " << omp_get_max_threads() << endl;
 	
 	ArgMapping amap;
 	amap.arg("r", party, "Role of party: ALICE = 1; BOB = 2");
@@ -390,7 +388,7 @@ int main(int argc, char **argv) {
 	setup_semi_honest(io_gc, party);
 	auto time_span = time_from(time_start);
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
-	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, type = {}, lut_type = {}, hash_type = {}", batch_size, parallel, type, lut_type, hash_type) << endl;
+	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, num_threads = {}, type = {}, lut_type = {}, hash_type = {}, input_size = {}, output_size = {}", batch_size, parallel, num_threads, type, lut_type, hash_type, LUT_INPUT_SIZE, LUT_OUTPUT_SIZE) << endl;
 	// utils::check(type == 0, "Only PIRANA is supported now. "); 
 	bench_lut();
 	delete io_gc;
