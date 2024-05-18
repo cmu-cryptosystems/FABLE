@@ -1,3 +1,5 @@
+#include "LUT_utils.h"
+
 #include <fmt/format.h>
 #include <libOTe/TwoChooseOne/ConfigureCode.h>
 #include <libOTe/TwoChooseOne/TcoOtDefines.h>
@@ -17,6 +19,7 @@ bool verbose = true;
 int party = 1;
 int batch_size = 256;
 int lut_bitlength = 16;
+int lut_type = 0;
 int num_threads = 1;
 string address = "127.0.0.1";
 int port = 32000;
@@ -28,22 +31,20 @@ int main(int argc, char **argv) {
 
   amap.arg("r", party, "Role of party: ALICE/SERVER = 1; BOB/CLIENT = 2");
   amap.arg("p", port, "Port Number");
-  amap.arg("l", lut_bitlength, "Bit Length");
+  amap.arg("len", lut_bitlength, "Bit Length");
   amap.arg("s", batch_size , "Batch Size");
+  amap.arg("l", lut_type , "0 = Random LUT; 1 = Gamma LUT");
   amap.arg("t", num_threads , "#Threads");
   amap.arg("ip", address, "IP Address of server (ALICE)");
   amap.parse(argc, argv);
 
-  cout << fmt::format("Testing SPLUT with parameters bit_length={}, batch_size={}, num_threads={}", lut_bitlength, batch_size, num_threads) << endl;
+  cout << fmt::format("Testing SPLUT with parameters bit_length={}, batch_size = {}, lut_type = {}, num_threads = {}", lut_bitlength, batch_size, lut_type, num_threads) << endl;
 
   auto ip = address+":"+std::to_string(port);
   auto chl = cp::asioConnect(ip, party == ALICE);
 
   auto lut_size = 1ULL << lut_bitlength;
-	vector<uint32_t> lut(lut_size);
-  for (int i = 0; i < lut.size(); i++) {
-    lut[i] = rand() % lut_size;
-  }
+	vector<uint64_t> lut = get_lut((LUTType)lut_type);
   
   vector<uint32_t> plain_queries(batch_size);
   vector<uint32_t> input(batch_size);
