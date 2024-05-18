@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   auto chl = cp::asioConnect(ip, party == ALICE);
 
   auto lut_size = 1ULL << lut_bitlength;
-	vector<uint64_t> lut = get_lut((LUTType)lut_type);
+	vector<uint64_t> lut = get_lut((LUTType)lut_type, lut_bitlength, lut_bitlength);
   
   vector<uint32_t> plain_queries(batch_size);
   vector<uint32_t> input(batch_size);
