@@ -163,13 +163,15 @@ void bench_lut() {
 	CompResultType sort_res;
 
 	// PIR
-	start_record(io_gc, "PIR");
+	start_record(io_gc, "Share Retrieval");
 	if (party == BOB) {
 		
 		batch_client = new BatchPIRClient(params);
 
+		start_record(io_gc, "Query");
 		auto queries = batch_client->create_queries(batch);
 		auto query_buffer = batch_client->serialize_query(queries);
+		end_record(io_gc, "Query");
 		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
 
 		// send key_buf and query_buf
@@ -189,6 +191,7 @@ void bench_lut() {
             }
         }
 
+		start_record(io_gc, "GenContext");
 		set<int> dummy_buckets;
 		for(int bucket_idx = 0; bucket_idx < num_bucket; ++bucket_idx) {
 			if (batch_client->cuckoo_map.count(bucket_idx) == 0)
@@ -202,6 +205,7 @@ void bench_lut() {
 			sort_reference[i] = dummies[i - batch_size];
 		}
 		sort_res = sort(sort_reference, num_bucket, BOB);
+		end_record(io_gc, "GenContext");
 
 		vector<vector<vector<seal_byte>>> response_buffer(params.response_size[0]);
 		for (int i = 0; i < params.response_size[0]; i++) {
@@ -213,9 +217,12 @@ void bench_lut() {
 				io_gc->recv_data(response_buffer[i][j].data(), buf_size);
 			}
 		}
+		start_record(io_gc, "Extraction");
 		auto responses = batch_client->deserialize_response(response_buffer);
 		auto decode_responses = batch_client->decode_responses(responses);
+		end_record(io_gc, "Extraction");
 
+		start_record(io_gc, "Share Conversion");
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
 				A_index[hash_idx][bucket_idx] = Integer(LUT_INPUT_SIZE+1, 0, ALICE);
@@ -249,6 +256,8 @@ void bench_lut() {
 			}
 		}
 	} else {
+		
+		start_record(io_gc, "Server Setup");
 		batch_server = new BatchPIRServer(params, prng);
 		batch_server->populate_raw_db(generator);
 		
@@ -258,6 +267,7 @@ void bench_lut() {
 			batch_server->aes_prepare(aes_key, aes_prefix);
 		}
 		batch_server->initialize();
+		end_record(io_gc, "Server Setup");
 
 		uint32_t glk_size, rlk_size;
 		io_gc->recv_data(&glk_size, sizeof(uint32_t));
@@ -280,11 +290,15 @@ void bench_lut() {
             }
         }
 
+		start_record(io_gc, "GenContext");
 		sort_res = sort(sort_reference, num_bucket, BOB);
+		end_record(io_gc, "GenContext");
 
+		start_record(io_gc, "Answer");
 		auto queries = batch_server->deserialize_query(query_buffer);
 		vector<PIRResponseList> responses = batch_server->generate_response(client_id, queries);
 		auto response_buffer = batch_server->serialize_response(responses);
+		end_record(io_gc, "Answer");
 		 for (int i = 0; i < params.response_size[0]; i++) {
             for (int j = 0; j < params.response_size[1]; j++) {
 				uint32_t buf_size = response_buffer[i][j].size();
@@ -293,6 +307,7 @@ void bench_lut() {
             }
         }
 		
+		start_record(io_gc, "Share Conversion");
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
 				A_index[hash_idx][bucket_idx] = Integer(LUT_INPUT_SIZE+1, batch_server->index_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
@@ -322,7 +337,10 @@ void bench_lut() {
 			entry[hash_idx][bucket_idx] = A_entry[hash_idx][bucket_idx] ^ B_entry[hash_idx][bucket_idx];
 		}
 	}
+	end_record(io_gc, "Share Conversion");
 
+	end_record(io_gc, "Share Retrieval");
+	start_record(io_gc, "Decode");
 	// Collect result
 	auto zero_index = Integer(LUT_INPUT_SIZE+1, 0);
 	secret_queries.resize(num_bucket, zero_index);
@@ -337,13 +355,14 @@ void bench_lut() {
 			result[bucket_idx] = result[bucket_idx] ^ If(selected_query == index[hash_idx][bucket_idx], entry[hash_idx][bucket_idx], zero_entry);
 		}
 	}
-	end_record(io_gc, "PIR");
 
-	// Remapping
-	start_record(io_gc, "Remapping");
 	permute(sort_res, result, true);
+	end_record(io_gc, "Decode");
+	
+	// Remapping
+	start_record(io_gc, "Mapping");
 	remap(result, context);
-	end_record(io_gc, "Remapping");
+	end_record(io_gc, "Mapping");
 
 	end_record(io_gc, "BatchLUT");
 

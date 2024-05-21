@@ -56,6 +56,7 @@ inline std::vector<uint64_t> get_lut(LUTType lut_typ, int input_bits = LUT_INPUT
 	std::vector<double> abs_error(lut_size, 0);
 	std::vector<double> rel_error(lut_size, 0);
 	
+	# pragma omp parallel for
 	for (uint64_t i = 0; i < lut_size; i ++) {
 		if (lut_typ == Random) {
 			lut[i] = rand() % (uint64_t)range;
