@@ -29,8 +29,11 @@ Integer share_bitset(std::bitset<size> bits, int party) {
 
 void bench_lut() {
 	
+	vector<uint64_t> lut = get_lut((LUTType)lut_type);
+
+	start_record(io_gc, "Protocol Preparation");
+	
 	BatchPirParams params(batch_size, parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
-    // params.print_params();
 
 	BatchLUTConfig config{
 		batch_size, 
@@ -39,20 +42,34 @@ void bench_lut() {
 		LUT_INPUT_SIZE
 	};
 
-	// preparing queries
-    vector<uint64_t> plain_queries(batch_size);
-    vector<Integer> secret_queries(batch_size);
-	vector<uint64_t> lut = get_lut((LUTType)lut_type);
-
-    for (int i = 0; i < batch_size; i++) {
-        plain_queries[i] = (i < batch_size / 2) ? rand() % DatabaseConstants::DBSize : plain_queries[rand() % (batch_size / 2)]; // Force duplicates. 
-		secret_queries[i] = Integer(DatabaseConstants::InputLength + 1, plain_queries[i], BOB);
-	}
-
 	auto generator = [lut](size_t i){return rawdatablock(lut.at(i)); };
-	
+
 	BatchPIRServer* batch_server; 
 	BatchPIRClient* batch_client;
+	
+    osuCrypto::PRNG prng(osuCrypto::sysRandomSeed());
+
+	if (party == BOB) {
+		batch_client = new BatchPIRClient(params);
+		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
+
+		// send key_buf and query_buf
+		uint32_t glk_size = glk_buffer.size(), rlk_size = rlk_buffer.size();
+		io_gc->send_data(&glk_size, sizeof(uint32_t));
+		io_gc->send_data(&rlk_size, sizeof(uint32_t));
+		io_gc->send_data(glk_buffer.data(), glk_size);
+		io_gc->send_data(rlk_buffer.data(), rlk_size);
+	} else {
+		batch_server = new BatchPIRServer(params, prng);
+		batch_server->populate_raw_db(generator);
+		uint32_t glk_size, rlk_size;
+		io_gc->recv_data(&glk_size, sizeof(uint32_t));
+		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
+		vector<seal::seal_byte> glk_buffer(glk_size), rlk_buffer(rlk_size);
+		io_gc->recv_data(glk_buffer.data(), glk_size);
+		io_gc->recv_data(rlk_buffer.data(), rlk_size);
+		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
+	}
 
 	// ALICE: server
 	// BOB: client
@@ -60,15 +77,33 @@ void bench_lut() {
 	int num_bucket = params.get_num_buckets();
 	int bucket_size = params.get_bucket_size();
 
+	end_record(io_gc, "Protocol Preparation");
+
+	start_record(io_gc, "Input Preparation");
+	// preparing queries
+    vector<uint64_t> plain_queries(batch_size);
+    vector<Integer> secret_queries(batch_size);
+    for (int i = 0; i < batch_size; i++) {
+        plain_queries[i] = (i < batch_size / 2) ? rand() % DatabaseConstants::DBSize : plain_queries[rand() % (batch_size / 2)]; // Force duplicates. 
+		secret_queries[i] = Integer(DatabaseConstants::InputLength + 1, plain_queries[i], BOB);
+	}
+	end_record(io_gc, "Input Preparation");
+
 	// synchronize
 	barrier(party, io_gc);
-
 	io_gc->flush();
+
 	cout << BLUE << "BatchLUT" << RESET << endl;
 	start_record(io_gc, "BatchLUT");
-	
-    osuCrypto::PRNG prng(osuCrypto::sysRandomSeed());
 
+	// Deduplication
+	start_record(io_gc, "Deduplicate");
+	auto context = deduplicate(secret_queries, config);
+	end_record(io_gc, "Deduplicate");
+
+	// prepare batch
+	start_record(io_gc, "OPRF Evaluation");
+	
     keyblock lowmc_key; 
     prefixblock lowmc_prefix; 
     oc::block aes_key;
@@ -88,13 +123,6 @@ void bench_lut() {
 		}
 	}
 
-	// Deduplication
-	start_record(io_gc, "Deduplicate");
-	auto context = deduplicate(secret_queries, config);
-	end_record(io_gc, "Deduplicate");
-
-	// prepare batch
-	start_record(io_gc, "Batch Preparation");
     vector<string> batch(batch_size);
 	sci::LowMC* lowmc_ciphers_2PC;
 	sci::AES* aes_ciphers_2PC;
@@ -151,7 +179,10 @@ void bench_lut() {
 			}
 		}
 	}
-	end_record(io_gc, "Batch Preparation");
+	end_record(io_gc, "OPRF Evaluation");
+
+	// PIR
+	start_record(io_gc, "Share Retrieval");
 
 	vector<IntegerArray> A_index(w, IntegerArray(num_bucket));
 	vector<IntegerArray> A_entry(w, IntegerArray(num_bucket));
@@ -162,16 +193,10 @@ void bench_lut() {
 	vector<int> sort_reference(num_bucket, 0);
 	CompResultType sort_res;
 
-	// PIR
-	start_record(io_gc, "Share Retrieval");
 	if (party == BOB) {
 		
+		start_record(io_gc, "Client Preparation");
 		batch_client = new BatchPIRClient(params);
-
-		start_record(io_gc, "Query");
-		auto queries = batch_client->create_queries(batch);
-		auto query_buffer = batch_client->serialize_query(queries);
-		end_record(io_gc, "Query");
 		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
 
 		// send key_buf and query_buf
@@ -180,7 +205,14 @@ void bench_lut() {
 		io_gc->send_data(&rlk_size, sizeof(uint32_t));
 		io_gc->send_data(glk_buffer.data(), glk_size);
 		io_gc->send_data(rlk_buffer.data(), rlk_size);
+		end_record(io_gc, "Client Preparation");
 
+		start_record(io_gc, "Query Computation");
+		auto queries = batch_client->create_queries(batch);
+		auto query_buffer = batch_client->serialize_query(queries);
+		end_record(io_gc, "Query Computation");
+
+		start_record(io_gc, "Query Communication");
         for (int i = 0; i < params.query_size[0]; i++) {
             for (int j = 0; j < params.query_size[1]; j++) {
                 for (int k = 0; k < params.query_size[2]; k++) {
@@ -190,6 +222,7 @@ void bench_lut() {
                 }
             }
         }
+		end_record(io_gc, "Query Communication");
 
 		start_record(io_gc, "GenContext");
 		set<int> dummy_buckets;
@@ -207,6 +240,7 @@ void bench_lut() {
 		sort_res = sort(sort_reference, num_bucket, BOB);
 		end_record(io_gc, "GenContext");
 
+		start_record(io_gc, "Answer Communication");
 		vector<vector<vector<seal_byte>>> response_buffer(params.response_size[0]);
 		for (int i = 0; i < params.response_size[0]; i++) {
             response_buffer[i].resize(params.response_size[1]);
@@ -217,6 +251,7 @@ void bench_lut() {
 				io_gc->recv_data(response_buffer[i][j].data(), buf_size);
 			}
 		}
+		end_record(io_gc, "Answer Communication");
 		start_record(io_gc, "Extraction");
 		auto responses = batch_client->deserialize_response(response_buffer);
 		auto decode_responses = batch_client->decode_responses(responses);
@@ -257,10 +292,19 @@ void bench_lut() {
 		}
 	} else {
 		
-		start_record(io_gc, "Server Setup");
+		start_record(io_gc, "Server Preparation");
 		batch_server = new BatchPIRServer(params, prng);
 		batch_server->populate_raw_db(generator);
+		uint32_t glk_size, rlk_size;
+		io_gc->recv_data(&glk_size, sizeof(uint32_t));
+		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
+		vector<seal::seal_byte> glk_buffer(glk_size), rlk_buffer(rlk_size);
+		io_gc->recv_data(glk_buffer.data(), glk_size);
+		io_gc->recv_data(rlk_buffer.data(), rlk_size);
+		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
+		end_record(io_gc, "Server Preparation");
 		
+		start_record(io_gc, "Server Setup");
 		if (params.get_hash_type() == HashType::LowMC) {
 			batch_server->lowmc_prepare(lowmc_key, lowmc_prefix);
 		} else {
@@ -269,13 +313,7 @@ void bench_lut() {
 		batch_server->initialize();
 		end_record(io_gc, "Server Setup");
 
-		uint32_t glk_size, rlk_size;
-		io_gc->recv_data(&glk_size, sizeof(uint32_t));
-		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
-		vector<seal::seal_byte> glk_buffer(glk_size), rlk_buffer(rlk_size);
-		io_gc->recv_data(glk_buffer.data(), glk_size);
-		io_gc->recv_data(rlk_buffer.data(), rlk_size);
-		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
+		start_record(io_gc, "Query Communication");
 		vector<vector<vector<vector<seal_byte>>>> query_buffer(params.query_size[0]);
         for (int i = 0; i < params.query_size[0]; i++) {
             query_buffer[i].resize(params.query_size[1]);
@@ -289,23 +327,27 @@ void bench_lut() {
                 }
             }
         }
+		end_record(io_gc, "Query Communication");
 
 		start_record(io_gc, "GenContext");
 		sort_res = sort(sort_reference, num_bucket, BOB);
 		end_record(io_gc, "GenContext");
 
-		start_record(io_gc, "Answer");
+		start_record(io_gc, "Answer Computation");
 		auto queries = batch_server->deserialize_query(query_buffer);
 		vector<PIRResponseList> responses = batch_server->generate_response(client_id, queries);
 		auto response_buffer = batch_server->serialize_response(responses);
-		end_record(io_gc, "Answer");
-		 for (int i = 0; i < params.response_size[0]; i++) {
+		end_record(io_gc, "Answer Computation");
+
+		start_record(io_gc, "Answer Communication");
+		for (int i = 0; i < params.response_size[0]; i++) {
             for (int j = 0; j < params.response_size[1]; j++) {
 				uint32_t buf_size = response_buffer[i][j].size();
 				io_gc->send_data(&buf_size, sizeof(uint32_t));
 				io_gc->send_data(response_buffer[i][j].data(), buf_size);
             }
         }
+		end_record(io_gc, "Answer Communication");
 		
 		start_record(io_gc, "Share Conversion");
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
@@ -367,6 +409,7 @@ void bench_lut() {
 	end_record(io_gc, "BatchLUT");
 
 	// Verify
+	start_record(io_gc, "Verification");
 	vector<uint64_t> plain_result(batch_size);
 	for (int i = 0; i < batch_size; i++) {
 		plain_result[i] = result[i].reveal<uint64_t>();
@@ -377,6 +420,7 @@ void bench_lut() {
 			fmt::format("[BatchLUT] Test failed. T[{}]={}, but we get {}. ", plain_queries[batch_idx], lut.at(plain_queries[batch_idx]), plain_result[batch_idx])
 		);
 	}
+	end_record(io_gc, "Verification");
 
 	cout << GREEN << "[BatchLUT] Test passed" << RESET << endl;
 
