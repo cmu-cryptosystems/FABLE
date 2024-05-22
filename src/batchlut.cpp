@@ -190,23 +190,8 @@ void bench_lut() {
 	vector<IntegerArray> B_entry(w, IntegerArray(num_bucket));
 	vector<IntegerArray> index(w, IntegerArray(num_bucket));
 	vector<IntegerArray> entry(w, IntegerArray(num_bucket));
-	vector<int> sort_reference(num_bucket, 0);
-	CompResultType sort_res;
 
 	if (party == BOB) {
-		
-		start_record(io_gc, "Client Preparation");
-		batch_client = new BatchPIRClient(params);
-		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
-
-		// send key_buf and query_buf
-		uint32_t glk_size = glk_buffer.size(), rlk_size = rlk_buffer.size();
-		io_gc->send_data(&glk_size, sizeof(uint32_t));
-		io_gc->send_data(&rlk_size, sizeof(uint32_t));
-		io_gc->send_data(glk_buffer.data(), glk_size);
-		io_gc->send_data(rlk_buffer.data(), rlk_size);
-		end_record(io_gc, "Client Preparation");
-
 		start_record(io_gc, "Query Computation");
 		auto queries = batch_client->create_queries(batch);
 		auto query_buffer = batch_client->serialize_query(queries);
@@ -224,21 +209,6 @@ void bench_lut() {
         }
 		end_record(io_gc, "Query Communication");
 
-		start_record(io_gc, "GenContext");
-		set<int> dummy_buckets;
-		for(int bucket_idx = 0; bucket_idx < num_bucket; ++bucket_idx) {
-			if (batch_client->cuckoo_map.count(bucket_idx) == 0)
-				dummy_buckets.insert(bucket_idx);
-		}
-		vector<int> dummies(dummy_buckets.begin(), dummy_buckets.end());
-		for (int i = 0; i < batch_size; i++) {
-			sort_reference[i] = batch_client->inv_cuckoo_map[i];
-		}
-		for (int i = batch_size; i < num_bucket; i++) {
-			sort_reference[i] = dummies[i - batch_size];
-		}
-		sort_res = sort(sort_reference, num_bucket, BOB);
-		end_record(io_gc, "GenContext");
 
 		start_record(io_gc, "Answer Communication");
 		vector<vector<vector<seal_byte>>> response_buffer(params.response_size[0]);
@@ -252,6 +222,7 @@ void bench_lut() {
 			}
 		}
 		end_record(io_gc, "Answer Communication");
+
 		start_record(io_gc, "Extraction");
 		auto responses = batch_client->deserialize_response(response_buffer);
 		auto decode_responses = batch_client->decode_responses(responses);
@@ -291,19 +262,6 @@ void bench_lut() {
 			}
 		}
 	} else {
-		
-		start_record(io_gc, "Server Preparation");
-		batch_server = new BatchPIRServer(params, prng);
-		batch_server->populate_raw_db(generator);
-		uint32_t glk_size, rlk_size;
-		io_gc->recv_data(&glk_size, sizeof(uint32_t));
-		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
-		vector<seal::seal_byte> glk_buffer(glk_size), rlk_buffer(rlk_size);
-		io_gc->recv_data(glk_buffer.data(), glk_size);
-		io_gc->recv_data(rlk_buffer.data(), rlk_size);
-		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
-		end_record(io_gc, "Server Preparation");
-		
 		start_record(io_gc, "Server Setup");
 		if (params.get_hash_type() == HashType::LowMC) {
 			batch_server->lowmc_prepare(lowmc_key, lowmc_prefix);
@@ -328,10 +286,6 @@ void bench_lut() {
             }
         }
 		end_record(io_gc, "Query Communication");
-
-		start_record(io_gc, "GenContext");
-		sort_res = sort(sort_reference, num_bucket, BOB);
-		end_record(io_gc, "GenContext");
 
 		start_record(io_gc, "Answer Computation");
 		auto queries = batch_server->deserialize_query(query_buffer);
@@ -382,7 +336,27 @@ void bench_lut() {
 	end_record(io_gc, "Share Conversion");
 
 	end_record(io_gc, "Share Retrieval");
+
 	start_record(io_gc, "Decode");
+	
+	// Gen Context
+	vector<int> sort_reference(num_bucket, 0);
+	if (party == BOB) {
+		set<int> dummy_buckets;
+		for(int bucket_idx = 0; bucket_idx < num_bucket; ++bucket_idx) {
+			if (batch_client->cuckoo_map.count(bucket_idx) == 0)
+				dummy_buckets.insert(bucket_idx);
+		}
+		vector<int> dummies(dummy_buckets.begin(), dummy_buckets.end());
+		for (int i = 0; i < batch_size; i++) {
+			sort_reference[i] = batch_client->inv_cuckoo_map[i];
+		}
+		for (int i = batch_size; i < num_bucket; i++) {
+			sort_reference[i] = dummies[i - batch_size];
+		}
+	}
+	CompResultType sort_res = sort(sort_reference, num_bucket, BOB);
+
 	// Collect result
 	auto zero_index = Integer(LUT_INPUT_SIZE+1, 0);
 	secret_queries.resize(num_bucket, zero_index);
