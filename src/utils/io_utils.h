@@ -17,10 +17,10 @@ struct recordinfo {
 };
 
 void start_record(sci::NetIO* io, std::string tag);
-void end_record(sci::NetIO* io, std::string tag);
+void end_record(sci::NetIO* io, std::string tag, bool verbose = true);
 
 void start_record(coproto::AsioSocket &chl, std::string tag);
-void end_record(coproto::AsioSocket &chl, std::string tag);
+void end_record(coproto::AsioSocket &chl, std::string tag, bool verbose = true);
 
 void start_timing(std::string prefix);
 double end_timing(std::string prefix, bool verbose = true);
