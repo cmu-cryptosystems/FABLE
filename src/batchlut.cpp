@@ -15,7 +15,7 @@
 using namespace sci;
 using std::cout, std::endl, std::vector, std::set;
 
-int party, port = 8000, batch_size = 256, parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0;
+int party, port = 8000, batch_size = 256, parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0, seed = 12345;
 NetIO *io_gc;
 
 template<size_t size>
@@ -29,7 +29,7 @@ Integer share_bitset(std::bitset<size> bits, int party) {
 
 void bench_lut() {
 	
-	vector<uint64_t> lut = get_lut((LUTType)lut_type);
+	vector<uint64_t> lut = get_lut((LUTType)lut_type, seed);
 
 	start_record(io_gc, "Protocol Preparation");
 	
@@ -306,8 +306,19 @@ void bench_lut() {
 		start_record(io_gc, "Share Conversion");
 		for (int hash_idx = 0; hash_idx < w; hash_idx++) {
 			for (int bucket_idx = 0; bucket_idx < num_bucket; bucket_idx++) {
-				A_index[hash_idx][bucket_idx] = Integer(LUT_INPUT_SIZE+1, batch_server->index_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
-				A_entry[hash_idx][bucket_idx] = Integer(LUT_OUTPUT_SIZE, batch_server->entry_masks[hash_idx][bucket_idx].to_ullong(), ALICE);
+				bool* index_mask_buffer = new bool[LUT_INPUT_SIZE+1];
+				for (int i = 0; i < LUT_INPUT_SIZE+1; i++) 
+					index_mask_buffer[i] = batch_server->index_masks[hash_idx][bucket_idx][i];
+				A_index[hash_idx][bucket_idx].bits.resize(LUT_INPUT_SIZE+1);
+				prot_exec->feed((block128 *)A_index[hash_idx][bucket_idx].bits.data(), ALICE, index_mask_buffer, LUT_INPUT_SIZE+1); 
+				delete[] index_mask_buffer;
+
+				bool* entry_mask_buffer = new bool[LUT_OUTPUT_SIZE];
+				for (int i = 0; i < LUT_OUTPUT_SIZE; i++) 
+					entry_mask_buffer[i] = batch_server->entry_masks[hash_idx][bucket_idx][i];
+				A_entry[hash_idx][bucket_idx].bits.resize(LUT_OUTPUT_SIZE);
+				prot_exec->feed((block128 *)A_entry[hash_idx][bucket_idx].bits.data(), ALICE, entry_mask_buffer, LUT_OUTPUT_SIZE); 
+				delete[] entry_mask_buffer;
 			}
 		}
 
@@ -412,6 +423,7 @@ int main(int argc, char **argv) {
 	amap.arg("r", party, "Role of party: ALICE = 1; BOB = 2");
 	amap.arg("p", port, "Port Number");
 	amap.arg("s", batch_size, "number of total elements");
+	amap.arg("seed", seed, "random seed");
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
 	amap.arg("thr", num_threads, "number of threads");
 	amap.arg("t", type, "0 = PIRANA; 1 = UIUC");

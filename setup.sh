@@ -14,7 +14,7 @@ export PAT=github_pat_11AHK6QAY0i4jaSjc3aAUE_XCDntMdLRtaWhdXULQl0N8tjK5ClBvMShVA
 git clone https://$PAT@github.com/timsu1104/BatchLUT.git
 cd BatchLUT
 git submodule update --init --recursive --progress
-cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_OUTPUT_SIZE=16\
+cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_INPUT_SIZE=20 -DLUT_OUTPUT_SIZE=128\
  -DOPENSSL_INCLUDE_DIR=$HOME/miniforge3/envs/batchlut/include/openssl\
  -DOPENSSL_CRYPTO_LIBRARY=$HOME/miniforge3/envs/batchlut/lib/libcrypto.so\
  -DOPENSSL_SSL_LIBRARY=$HOME/miniforge3/envs/batchlut/lib/libssl.so

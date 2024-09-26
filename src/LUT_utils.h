@@ -49,14 +49,15 @@ inline double itof(uint64_t x, long double fixedpoint_range = db_size, double in
 	return x * input_range / fixedpoint_range;
 }
 
-inline std::vector<uint64_t> get_lut(LUTType lut_typ, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
+inline std::vector<uint64_t> get_lut(LUTType lut_typ, int seed, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
     uint64_t lut_size = 1 << input_bits;
     long double range = pow(2.0L, output_bits);
 	std::vector<uint64_t> lut(lut_size);
 	std::vector<double> abs_error(lut_size, 0);
 	std::vector<double> rel_error(lut_size, 0);
 	
-	# pragma omp parallel for
+	srand(seed);
+	# pragma omp parallel for if (lut_typ != Random)
 	for (uint64_t i = 0; i < lut_size; i ++) {
 		if (lut_typ == Random) {
 			lut[i] = rand() % (uint64_t)range;
