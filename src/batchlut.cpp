@@ -6,24 +6,31 @@
 #include "utils/io_utils.h"
 #include <cstdint>
 
+#include <execinfo.h>
+#include <signal.h>
+
 using namespace sci;
 using std::cout, std::endl, std::vector;
 
-int party, port = 8000, batch_size = 256, parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0, fuse = 0, seed = 12345;
+int party, port = 8000, batch_size = 256, db_size = (1 << LUT_INPUT_SIZE), parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0, fuse = 0, seed = 12345;
 NetIO *io_gc;
 
-template<size_t size>
-Integer share_bitset(std::bitset<size> bits, int party) {
-	Integer res(size, 0);
-	for (int i = 0; i < size; i++) {
-		res[i] = Bit(bits[i], party);
-	}
-	return res;
+void handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
 }
 
-void bench_lut() {
+void bench_join() {
 	
-	vector<uint64_t> lut = get_lut((LUTType)lut_type, seed);
+	auto lut = get_lut((LUTType)lut_type, db_size, seed);
 
 	start_record(io_gc, "Protocol Preparation");
 	
@@ -45,7 +52,14 @@ void bench_lut() {
     vector<uint64_t> plain_queries(batch_size);
     vector<Integer> secret_queries(batch_size);
     for (int i = 0; i < batch_size; i++) {
-        plain_queries[i] = (i < batch_size / 2) ? rand() % DatabaseConstants::DBSize : plain_queries[rand() % (batch_size / 2)]; // Force duplicates. 
+		if (i < batch_size / 2) {
+			do {
+				plain_queries[i] = rand() % (1 << LUT_INPUT_SIZE);
+			} while (!lut.count(plain_queries[i]));
+			assert (lut.count(plain_queries[i]) == 1);
+		} else {
+			plain_queries[i] = plain_queries[rand() % (batch_size / 2)]; // Force duplicates. 
+		}
 		secret_queries[i] = Integer(DatabaseConstants::InputLength + 1, plain_queries[i], BOB);
 	}
 	end_record(io_gc, "Input Preparation");
@@ -80,11 +94,14 @@ void bench_lut() {
 }
 
 int main(int argc, char **argv) {
+
+	signal(SIGSEGV, handler);
 	
 	ArgMapping amap;
 	amap.arg("r", party, "Role of party: ALICE = 1; BOB = 2");
 	amap.arg("p", port, "Port Number");
-	amap.arg("s", batch_size, "number of total elements");
+	amap.arg("bs", batch_size, "batch size");
+	amap.arg("db", db_size, "database size");
 	amap.arg("seed", seed, "random seed");
 	amap.arg("par", parallel, "parallel flag: 1 = parallel; 0 = sequential");
 	amap.arg("thr", num_threads, "number of threads");
@@ -102,7 +119,7 @@ int main(int argc, char **argv) {
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
 	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, num_threads = {}, type = {}, lut_type = {}, hash_type = {}, input_size = {}, output_size = {}", batch_size, parallel, num_threads, type, lut_type, hash_type, LUT_INPUT_SIZE, LUT_OUTPUT_SIZE) << endl;
 	// utils::check(type == 0, "Only PIRANA is supported now. "); 
-	bench_lut();
+	bench_join();
 	delete io_gc;
 	return 0;
 }

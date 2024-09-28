@@ -25,9 +25,6 @@ inline std::string lut_type_to_string(LUTType lut_typ) {
         return "Invalid";
 }
 
-const int client_id = 0;
-const uint64_t db_size = (1 << LUT_INPUT_SIZE);
-
 inline void barrier(int party, sci::NetIO* io_gc) {
 	bool prepared = false;
 	if (party == sci::BOB) {
@@ -40,27 +37,32 @@ inline void barrier(int party, sci::NetIO* io_gc) {
 }
 
 // Convert double to fixed point representation (scale x from [0, input_range) to [0, fixedpoint_range), then truncate the fractional part)
-inline uint64_t ftoi(double x, long double fixedpoint_range = db_size, double input_range = 10) {
+inline uint64_t ftoi(double x, long double fixedpoint_range, double input_range = 10) {
 	return std::round(std::clamp(x / input_range, -1., 1.) * fixedpoint_range);
 }
 
 // Convert fixed point representation to double
-inline double itof(uint64_t x, long double fixedpoint_range = db_size, double input_range = 10) {
+inline double itof(uint64_t x, long double fixedpoint_range, double input_range = 10) {
 	return x * input_range / fixedpoint_range;
 }
 
-inline std::vector<uint64_t> get_lut(LUTType lut_typ, int seed, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
-    uint64_t lut_size = 1 << input_bits;
+inline std::map<uint64_t, uint64_t> get_lut(LUTType lut_typ, uint64_t lut_size, int seed, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
     long double range = pow(2.0L, output_bits);
-	std::vector<uint64_t> lut(lut_size);
+	std::map<uint64_t, uint64_t> lut;
 	std::vector<double> abs_error(lut_size, 0);
 	std::vector<double> rel_error(lut_size, 0);
+
+	std::vector<uint64_t> indices(1 << LUT_INPUT_SIZE);
+	std::iota(indices.begin(), indices.end(), 0);
+	std::shuffle(indices.begin(), indices.end(), std::default_random_engine {});
+	indices.resize(lut_size);
 	
 	srand(seed);
-	# pragma omp parallel for if (lut_typ != Random)
+
+	std::cout << "Start filling LUT content" << std::endl;
 	for (uint64_t i = 0; i < lut_size; i ++) {
 		if (lut_typ == Random) {
-			lut[i] = rand() % (uint64_t)range;
+			lut[indices[i]] = rand() % (uint64_t)range;
         } else if (lut_typ == Gamma) {
 			double input = (double)i/lut_size * 3 + 1; // from 1 to 4
 			double value = std::tgamma(input);

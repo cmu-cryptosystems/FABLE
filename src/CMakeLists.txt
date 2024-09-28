@@ -8,8 +8,6 @@ add_subdirectory(GC)
 add_subdirectory(OT)
 
 add_executable(batchlut "batchlut.cpp")
-
-find_package(OpenMP REQUIRED)
 target_link_libraries(batchlut batchlut-GC)
 
 add_executable(splut "bench_splut.cpp")

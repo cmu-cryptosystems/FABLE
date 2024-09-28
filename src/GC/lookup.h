@@ -29,7 +29,16 @@ struct BatchLUTParams{
     NetIO *io_gc; 
 }; 
 
-BatchLUTParams fable_prepare(vector<uint64_t> lut, int party, int batch_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc); 
+template<size_t size>
+Integer share_bitset(std::bitset<size> bits, int party) {
+	Integer res(size, 0);
+	for (int i = 0; i < size; i++) {
+		res[i] = Bit(bits[i], party);
+	}
+	return res;
+}
+
+BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc); 
 
 IntegerArray fable_lookup(IntegerArray secret_queries, BatchLUTParams& lut_params, bool verbose = false); 
 

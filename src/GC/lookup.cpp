@@ -2,27 +2,16 @@
 
 namespace sci {
 
-template<size_t size>
-Integer share_bitset(std::bitset<size> bits, int party) {
-	Integer res(size, 0);
-	for (int i = 0; i < size; i++) {
-		res[i] = Bit(bits[i], party);
-	}
-	return res;
-}
+BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
 
-BatchLUTParams fable_prepare(vector<uint64_t> lut, int party, int batch_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
-
-	auto params = new BatchPirParams(batch_size, parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
+	auto params = new BatchPirParams(batch_size, lut.size(), parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
 
 	auto config = new BatchLUTConfig{
-		batch_size, 
-		(int)params->get_bucket_size(), 
-		DatabaseConstants::DBSize, 
+		params->get_batch_size(), 
+		params->get_bucket_size(), 
+		(1 << LUT_INPUT_SIZE), 
 		LUT_INPUT_SIZE
 	};
-
-	auto generator = [lut](size_t i){return rawdatablock(lut.at(i)); };
 
 	BatchPIRServer* batch_server; 
 	BatchPIRClient* batch_client;
@@ -41,7 +30,7 @@ BatchLUTParams fable_prepare(vector<uint64_t> lut, int party, int batch_size, bo
 		io_gc->send_data(rlk_buffer.data(), rlk_size);
 	} else {
 		batch_server = new BatchPIRServer(*params, *prng);
-		batch_server->populate_raw_db(generator);
+		batch_server->populate_raw_db(lut);
 		uint32_t glk_size, rlk_size;
 		io_gc->recv_data(&glk_size, sizeof(uint32_t));
 		io_gc->recv_data(&rlk_size, sizeof(uint32_t));

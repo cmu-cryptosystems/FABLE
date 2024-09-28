@@ -28,3 +28,4 @@ target_link_libraries(batchlut-GC
     PUBLIC SCI-GC batchlut-utils fmt::fmt oc::libOTe SEAL::seal OpenMP::OpenMP_CXX
 )
 target_include_directories(batchlut-GC PUBLIC ${PROJECT_SOURCE_DIR}/src ${PROJECT_SOURCE_DIR}/extern/BatchPIR/header)
+target_compile_options(batchlut-GC PUBLIC -rdynamic)
