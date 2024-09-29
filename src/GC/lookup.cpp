@@ -55,6 +55,59 @@ BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_
 	return lut_params; 
 }
 
+BatchLUTParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, BatchPirType type, HashType hash_type, NetIO *io_gc) {
+
+	auto params = new BatchPirParams(batch_size, db_size, parallel, num_threads, type, hash_type);
+
+	auto config = new BatchLUTConfig{
+		params->get_batch_size(), 
+		params->get_bucket_size(), 
+		(1 << LUT_INPUT_SIZE), 
+		LUT_INPUT_SIZE
+	};
+
+	BatchPIRServer* batch_server; 
+	BatchPIRClient* batch_client;
+	
+    osuCrypto::PRNG* prng = new osuCrypto::PRNG(osuCrypto::sysRandomSeed());
+
+	if (party == BOB) {
+		batch_client = new BatchPIRClient(*params);
+		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
+
+		// send key_buf and query_buf
+		uint32_t glk_size = glk_buffer.size(), rlk_size = rlk_buffer.size();
+		io_gc->send_data(&glk_size, sizeof(uint32_t));
+		io_gc->send_data(&rlk_size, sizeof(uint32_t));
+		io_gc->send_data(glk_buffer.data(), glk_size);
+		io_gc->send_data(rlk_buffer.data(), rlk_size);
+	} else {
+		batch_server = new BatchPIRServer(*params, *prng);
+		batch_server->populate_raw_db(lut);
+		uint32_t glk_size, rlk_size;
+		io_gc->recv_data(&glk_size, sizeof(uint32_t));
+		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
+		vector<seal::seal_byte> glk_buffer(glk_size), rlk_buffer(rlk_size);
+		io_gc->recv_data(glk_buffer.data(), glk_size);
+		io_gc->recv_data(rlk_buffer.data(), rlk_size);
+		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
+	}
+	
+	auto lut_params = BatchLUTParams{
+		party, 
+		hash_type, 
+		batch_size, 
+		config, 
+		prng, 
+		params,  
+		batch_server, 
+		batch_client, 
+		io_gc
+	};
+
+	return lut_params; 
+}
+
 IntegerArray fable_lookup(IntegerArray secret_queries, BatchLUTParams& lut_params, bool verbose) {
 
 	auto& [party, hash_type, batch_size, config, prng, params, batch_server, batch_client, io_gc] = lut_params;

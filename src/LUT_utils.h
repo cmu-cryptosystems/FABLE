@@ -25,17 +25,6 @@ inline std::string lut_type_to_string(LUTType lut_typ) {
         return "Invalid";
 }
 
-inline void barrier(int party, sci::NetIO* io_gc) {
-	bool prepared = false;
-	if (party == sci::BOB) {
-		prepared = true;
-		io_gc->send_data(&prepared, sizeof(prepared));
-	} else {
-		io_gc->recv_data(&prepared, sizeof(prepared));
-		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
-	}
-}
-
 // Convert double to fixed point representation (scale x from [0, input_range) to [0, fixedpoint_range), then truncate the fractional part)
 inline uint64_t ftoi(double x, long double fixedpoint_range, double input_range = 10) {
 	return std::round(std::clamp(x / input_range, -1., 1.) * fixedpoint_range);

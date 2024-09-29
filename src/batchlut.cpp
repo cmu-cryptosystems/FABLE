@@ -6,7 +6,6 @@
 #include "utils/io_utils.h"
 #include <cstdint>
 
-#include <execinfo.h>
 #include <signal.h>
 
 using namespace sci;
@@ -15,20 +14,9 @@ using std::cout, std::endl, std::vector;
 int party, port = 8000, batch_size = 256, db_size = (1 << LUT_INPUT_SIZE), parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0, fuse = 0, seed = 12345;
 NetIO *io_gc;
 
-void handler(int sig) {
-  void *array[10];
-  size_t size;
 
-  // get void*'s for all entries on the stack
-  size = backtrace(array, 10);
 
-  // print out all the frames to stderr
-  fprintf(stderr, "Error: signal %d:\n", sig);
-  backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(1);
-}
-
-void bench_join() {
+void bench_lut() {
 	
 	auto lut = get_lut((LUTType)lut_type, db_size, seed);
 
@@ -119,7 +107,7 @@ int main(int argc, char **argv) {
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
 	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, num_threads = {}, type = {}, lut_type = {}, hash_type = {}, input_size = {}, output_size = {}", batch_size, parallel, num_threads, type, lut_type, hash_type, LUT_INPUT_SIZE, LUT_OUTPUT_SIZE) << endl;
 	// utils::check(type == 0, "Only PIRANA is supported now. "); 
-	bench_join();
+	bench_lut();
 	delete io_gc;
 	return 0;
 }

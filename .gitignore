@@ -3,6 +3,6 @@ build/
 .vscode/
 flute_luts/
 
-*.py
+# *.py
 *.out
 *.log
