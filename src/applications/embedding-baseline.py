@@ -22,6 +22,7 @@ BOB = 1
 
 # @mpc.run_multiprocess(world_size=2)
 def word_embedding_lookup():
+    crypten.print(f"Experiment started. ")
     input_sentences_secret: crypten.CrypTensor = crypten.cryptensor(input_sentences, src = BOB)
     masks = torch.arange(vocab_size).view(1, 1, -1)
 
@@ -88,6 +89,6 @@ if __name__ == '__main__':
     })
 
     crypten.init()
-    torch.set_num_threads(1)
+    torch.set_num_threads(32)
 
     word_embedding_lookup()

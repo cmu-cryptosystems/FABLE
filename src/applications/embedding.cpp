@@ -105,7 +105,7 @@ void bench_embedding() {
 		}
 	}
 
-	auto flattened_result = fable_lookup(flattened_input, lut_params, true);
+	auto flattened_result = fable_lookup(flattened_input, lut_params, false);
 
 	vector<IntegerArray> result(samples_per_batch, IntegerArray(num_dimensions));
 
