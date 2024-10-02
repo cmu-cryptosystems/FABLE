@@ -41,7 +41,7 @@ inline std::map<uint64_t, uint64_t> get_lut(LUTType lut_typ, uint64_t lut_size, 
 	std::vector<double> abs_error(lut_size, 0);
 	std::vector<double> rel_error(lut_size, 0);
 
-	std::vector<uint64_t> indices(1 << LUT_INPUT_SIZE);
+	std::vector<uint64_t> indices(1 << input_bits);
 	std::iota(indices.begin(), indices.end(), 0);
 	std::shuffle(indices.begin(), indices.end(), std::default_random_engine {});
 	indices.resize(lut_size);

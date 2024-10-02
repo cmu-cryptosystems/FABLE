@@ -37,7 +37,7 @@ namespace sci {
 
 
 struct BatchLUTConfig {
-  size_t batch_size, bucket_size, db_size, bitlength;
+  uint64_t batch_size, bucket_size, db_size, bitlength;
 };
     
 struct DedupContext {

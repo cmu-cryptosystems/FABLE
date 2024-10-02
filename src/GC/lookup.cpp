@@ -2,14 +2,14 @@
 
 namespace sci {
 
-BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
+BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
 
 	auto params = new BatchPirParams(batch_size, lut.size(), parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
 
 	auto config = new BatchLUTConfig{
 		params->get_batch_size(), 
 		params->get_bucket_size(), 
-		(1 << LUT_INPUT_SIZE), 
+		(1ULL << LUT_INPUT_SIZE), 
 		LUT_INPUT_SIZE
 	};
 
@@ -62,7 +62,7 @@ BatchLUTParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int ba
 	auto config = new BatchLUTConfig{
 		params->get_batch_size(), 
 		params->get_bucket_size(), 
-		(1 << LUT_INPUT_SIZE), 
+		(1ULL << LUT_INPUT_SIZE), 
 		LUT_INPUT_SIZE
 	};
 

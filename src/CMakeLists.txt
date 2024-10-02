@@ -1,6 +1,7 @@
 add_compile_definitions(
     LUT_INPUT_SIZE=${LUT_INPUT_SIZE} 
     LUT_OUTPUT_SIZE=${LUT_OUTPUT_SIZE}
+    LUT_MAX_LOG_SIZE=${LUT_MAX_LOG_SIZE}
 )
 
 add_subdirectory(utils)
