@@ -1,4 +1,3 @@
-#include "GC/circuit_execution.h"
 #include "GC/sort.h"
 #include "LUT_utils.h"
 
@@ -21,7 +20,7 @@ typedef vector<IntegerArray> Table; // The first column is PK
 // Suppose we have three tables:
 // customer: [c_ssn (PK), c_orderkey], 4096 rows, held by BOB
 // balance: [b_ssn (PK), b_acctbal], 4096 rows, held by ALICE
-// orders: [o_orderkey (PK), o_totalprice], 16M rows, held by ALICE
+// orders: [o_orderkey (PK), o_totalprice], 1M rows, held by ALICE
 // We want to make the following query: 
 // select COUNT(*) from customer, balance, orders where c_ssn == b_ssn and c_orderkey == o_orderkey and b_acctbal < o_totalprice
 
@@ -83,66 +82,6 @@ void print(PlainTable pt, string name) {
 			cout << item << " ";
 		cout << endl;
 	}
-}
-
-inline IntegerArray If(const BitArray & select, IntegerArray &o1, IntegerArray &o2) {
-	auto num_integers = o1.size();
-	auto num_bits = o1[0].size();
-	IntegerArray xor_sum(num_integers);
-	BitArray xor_sum_flatview(num_integers * num_bits);
-	std::vector<Bit> select_arr(num_integers * num_bits);
-	for (int i = 0; i < num_integers; i ++) {
-		xor_sum[i] = o1[i] ^ o2[i];
-		std::copy(xor_sum[i].bits.begin(), xor_sum[i].bits.end(), xor_sum_flatview.begin() + i * num_bits);
-		std::fill(select_arr.begin() + i * num_bits, select_arr.begin() + (i+1) * num_bits, select[i]);
-	}
-	auto tmp = circ_exec->and_gate_batch((block128 *)xor_sum_flatview.data(), (block128 *)select_arr.data(), num_integers * num_bits, parallel, num_threads);
-	IntegerArray res(num_integers);
-	for (int i = 0; i < num_integers; i ++) {
-		res[i].bits.resize(num_bits);
-		for (int j = 0; j < num_bits; j++) {
-			res[i].bits[j] = Bit(tmp[i * num_bits + j]);
-		}
-		res[i] = res[i] ^ xor_sum[i];
-	}
-	return res;
-}
-
-inline void swap(const BitArray &swap, IntegerArray &o1, IntegerArray &o2) {
-  	IntegerArray o = If(swap, o1, o2);
-	for (int i = 0; i < o1.size(); i ++) {
-		o[i] = o[i] ^ o2[i];
-		o1[i] = o[i] ^ o1[i];
-		o2[i] = o[i] ^ o2[i];
-	}
-}
-
-void cmp_swap(std::vector<IntegerArray>& data, vector<int>& is, vector<int>& js, Bit acc) {
-	auto& key = data[0];
-	IntegerArray o1, o2;
-	BitArray to_swap;
-	for (int ind=0;ind<is.size();ind++) {
-		for (auto& datum: data) {
-			to_swap.push_back((key[is[ind]] > key[js[ind]]) == acc);
-			o1.push_back(datum[is[ind]]); 
-			o2.push_back(datum[js[ind]]); 
-		}
-	}
-	swap(to_swap, o1, o2);
-}
-
-void bitonic_merge(std::vector<IntegerArray>& data, int lo, int n, Bit acc) {
-  if (n > 1) {
-    int m = greatestPowerOfTwoLessThan(n);
-	vector<int> is, js;
-    for (int i = lo; i < lo + n - m; i++) {
-		is.push_back(i);
-		js.push_back(i + m);
-	}
-	cmp_swap(data, is, js, acc);
-    bitonic_merge(data, lo, m, acc);
-    bitonic_merge(data, lo + m, n - m, acc);
-  }
 }
 
 // Join two tables on the first column, assuming no common fields except the field to be join. 
@@ -259,6 +198,10 @@ void bench_join() {
 		balance[1][i] = rand() % acctbal_range + 1; 
 	}
 
+	// synchronize
+	barrier(party, io_gc);
+	io_gc->flush();
+	
 	start_record(io_gc, "Join");
 	start_record(io_gc, "Share customer and balance");
 	auto secret_customer = share(customer, BOB);
