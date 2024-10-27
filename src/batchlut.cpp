@@ -41,13 +41,13 @@ void bench_lut() {
     vector<uint64_t> plain_queries(batch_size);
     vector<Integer> secret_queries(batch_size);
     for (int i = 0; i < batch_size; i++) {
-		if (i < batch_size / 2) {
+		if (i < (batch_size + 1) / 2) {
 			do {
 				plain_queries[i] = rand() % (1 << LUT_INPUT_SIZE);
 			} while (!lut.count(plain_queries[i]));
 			assert (lut.count(plain_queries[i]) == 1);
 		} else {
-			plain_queries[i] = plain_queries[rand() % (batch_size / 2)]; // Force duplicates. 
+			plain_queries[i] = plain_queries[rand() % ((batch_size + 1) / 2)]; // Force duplicates. 
 		}
 		secret_queries[i] = Integer(DatabaseConstants::InputLength + 1, plain_queries[i], BOB);
 	}

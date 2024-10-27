@@ -49,6 +49,7 @@ inline std::map<uint64_t, uint64_t> get_lut(LUTType lut_typ, uint64_t lut_size, 
 	srand(seed);
 
 	std::cout << "Start filling LUT content" << std::endl;
+	#pragma omp parallel for if (lut_typ != Random)
 	for (uint64_t i = 0; i < lut_size; i ++) {
 		if (lut_typ == Random) {
 			lut[indices[i]] = rand() % (uint64_t)range;
