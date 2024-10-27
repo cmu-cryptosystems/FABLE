@@ -299,6 +299,9 @@ int main(int argc, char **argv) {
 	io_gc = new NetIO(party == ALICE ? nullptr : argv[1],
 						port + GC_PORT_OFFSET, true);
 
+	utils::check(LUT_INPUT_SIZE == 24, fmt::format("Please set LUT_INPUT_SIZE={}. ", 24)); 
+	utils::check(LUT_OUTPUT_SIZE == 32, fmt::format("Please set LUT_OUTPUT_SIZE={}. ", 32)); 
+	
 	auto time_start = clock_start(); 
 	setup_semi_honest(io_gc, party);
 	auto time_span = time_from(time_start);

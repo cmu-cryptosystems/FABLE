@@ -26,6 +26,7 @@ void bench_lut() {
 		lut, 
 		party, 
 		batch_size, 
+		db_size, 
 		parallel, 
 		num_threads, 
 		type, 

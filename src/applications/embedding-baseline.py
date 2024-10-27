@@ -4,6 +4,31 @@ import time
 import os
 from argparse import ArgumentParser
 
+import functools
+
+def prefix_function(function, prefunction):
+    @functools.wraps(function)
+    def run(*args, **kwargs):
+        prefunction(*args, **kwargs)
+        return function(*args, **kwargs)
+    return run
+
+def count_arith(size0, size1, op, device=None, *args, **kwargs):
+    assert len(size0) == 2 and len(size1) == 2 and size0[1] == size1[0]
+    assert op == "matmul", op
+    crypten.mpc.get_default_provider().num_arith_triples += size0[0] * size0[1] * size1[1]
+    
+def count_binary(size0, size1, device=None):
+    # assert len(size0) == 2 and len(size1) == 2 and size0[1] == size1[0]
+    assert size0 == size1, (size0, size1)
+    crypten.mpc.get_default_provider().num_binary_triples += size0.numel()
+
+provider = crypten.mpc.get_default_provider()
+setattr(provider, "num_arith_triples", 0)
+setattr(provider, "num_binary_triples", 0)
+provider.generate_additive_triple = prefix_function(provider.generate_additive_triple, count_arith)
+provider.generate_binary_triple = prefix_function(provider.generate_binary_triple, count_binary)
+
 num_dimensions = 32
 vocab_size = 519820
 words_per_sample = 16
@@ -92,3 +117,5 @@ if __name__ == '__main__':
     torch.set_num_threads(32)
 
     word_embedding_lookup()
+    print(f"Num arithmetic triples generated = {crypten.mpc.get_default_provider().num_arith_triples}")
+    print(f"Num binary triples generated = {crypten.mpc.get_default_provider().num_binary_triples}")
