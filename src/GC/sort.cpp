@@ -3,7 +3,7 @@
 
 namespace sci {
 
-void cmp_swap(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int i, int j, Bit acc, bool plain_acc, int party, CompResultType& result) {
+void cmp_swap(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int i, int j, Bit acc, bool plain_acc, CompResultType& result) {
   if (plain_key.empty()) {
     auto& key = data[0];
     Bit to_swap = ((key[i] > key[j]) == acc);
@@ -18,31 +18,31 @@ void cmp_swap(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int 
   }
 }
 
-void bitonic_merge(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, int party, CompResultType& result) {
+void bitonic_merge(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, CompResultType& result) {
   if (n > 1) {
     int m = greatestPowerOfTwoLessThan(n);
     for (int i = lo; i < lo + n - m; i++)
-      cmp_swap(data, plain_key, i, i + m, acc, plain_acc, party, result);
-    bitonic_merge(data, plain_key, lo, m, acc, plain_acc, party, result);
-    bitonic_merge(data, plain_key, lo + m, n - m, acc, plain_acc, party, result);
+      cmp_swap(data, plain_key, i, i + m, acc, plain_acc, result);
+    bitonic_merge(data, plain_key, lo, m, acc, plain_acc, result);
+    bitonic_merge(data, plain_key, lo + m, n - m, acc, plain_acc, result);
   }
 }
 
-void bitonic_sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, int party, CompResultType& result) {
+void bitonic_sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, CompResultType& result) {
   if (n > 1) {
     int m = n / 2;
-    bitonic_sort(data, plain_key, lo, m, !acc, !plain_acc, party, result);
-    bitonic_sort(data, plain_key, lo + m, n - m, acc, plain_acc, party, result);
-    bitonic_merge(data, plain_key, lo, n, acc, plain_acc, party, result);
+    bitonic_sort(data, plain_key, lo, m, !acc, !plain_acc, result);
+    bitonic_sort(data, plain_key, lo + m, n - m, acc, plain_acc, result);
+    bitonic_merge(data, plain_key, lo, n, acc, plain_acc, result);
   }
 }
 
 
-// Sort data, key is the first columns
+// Sort data, key is the first column
 CompResultType sort(std::vector<IntegerArray>& data, int size, Bit acc) {
   CompResultType result;
   std::vector<int> placeholder(0);
-  bitonic_sort(data, placeholder, 0, size, acc, false, PUBLIC, result);
+  bitonic_sort(data, placeholder, 0, size, acc, false, result);
   return result;
 }
 CompResultType sort(IntegerArray& data, int size, Bit acc) {
@@ -51,10 +51,10 @@ CompResultType sort(IntegerArray& data, int size, Bit acc) {
   data = wrapper[0];
   return result;
 }
-CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int size, int party, bool acc) {
+CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int size, bool acc) {
   assert (plain_key.size() > 0);
   CompResultType result;
-  bitonic_sort(data, plain_key, 0, size, acc, acc, party, result);
+  bitonic_sort(data, plain_key, 0, size, acc, acc, result);
 
   // post processing result
   size_t num_swap = result.plain_buffer.size();
@@ -75,15 +75,15 @@ CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key
     permute(result, datum);
   return result;
 }
-CompResultType sort(IntegerArray& data, std::vector<int>& plain_key, int size, int party, bool acc) {
+CompResultType sort(IntegerArray& data, std::vector<int>& plain_key, int size, bool acc) {
   std::vector<IntegerArray> wrapper{data};
-  auto result = sort(wrapper, plain_key, size, party, acc);
+  auto result = sort(wrapper, plain_key, size, acc);
   data = wrapper[0];
   return result;
 }
-CompResultType sort(std::vector<int>& plain_key, int size, int party, bool acc) {
+CompResultType sort(std::vector<int>& plain_key, int size, bool acc) {
   std::vector<IntegerArray> wrapper;
-  auto result = sort(wrapper, plain_key, size, party, acc);
+  auto result = sort(wrapper, plain_key, size, acc);
   return result;
 }
 

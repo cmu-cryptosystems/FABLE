@@ -14,11 +14,12 @@ void start_record(sci::NetIO* io, std::string tag) {
     record[tag] = info;
 }
 
-void end_record(sci::NetIO* io, std::string tag) {
+void end_record(sci::NetIO* io, std::string tag, bool verbose) {
     auto end_time = std::chrono::system_clock::now();
     auto start_time = record[tag].start_time;
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes in {} rounds. ", tag, duration.count(), io->counter - record[tag].counter, (io->num_rounds - record[tag].num_rounds)) << std::endl;
+    if (verbose)
+        std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes in {} rounds. ", tag, duration.count(), io->counter - record[tag].counter, (io->num_rounds - record[tag].num_rounds)) << std::endl;
     record.erase(tag);
 }
 
@@ -29,11 +30,12 @@ void start_record(coproto::AsioSocket &chl, std::string tag) {
     info.start_time = std::chrono::system_clock::now();
     record[tag] = info;
 }
-void end_record(coproto::AsioSocket &chl, std::string tag) {
+void end_record(coproto::AsioSocket &chl, std::string tag, bool verbose) {
     auto end_time = std::chrono::system_clock::now();
     auto start_time = record[tag].start_time;
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time);
-    std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes. ", tag, duration.count(), chl.bytesSent() + chl.bytesReceived() - record[tag].counter) << std::endl;
+    if (verbose)
+        std::cout << fmt::format("{}: \n    elapsed {} ms,\n    sent {} Bytes. ", tag, duration.count(), chl.bytesSent() + chl.bytesReceived() - record[tag].counter) << std::endl;
     record.erase(tag);
 }
 

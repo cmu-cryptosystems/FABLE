@@ -8,6 +8,8 @@
 #include <utils/net_io_channel.h>
 #include <coproto/Socket/AsioSocket.h>
 
+#include <execinfo.h>
+
 using namespace std::chrono;
 using std::cout, std::endl;
 struct recordinfo {
@@ -17,12 +19,25 @@ struct recordinfo {
 };
 
 void start_record(sci::NetIO* io, std::string tag);
-void end_record(sci::NetIO* io, std::string tag);
+void end_record(sci::NetIO* io, std::string tag, bool verbose = true);
 
 void start_record(coproto::AsioSocket &chl, std::string tag);
-void end_record(coproto::AsioSocket &chl, std::string tag);
+void end_record(coproto::AsioSocket &chl, std::string tag, bool verbose = true);
 
 void start_timing(std::string prefix);
 double end_timing(std::string prefix, bool verbose = true);
+
+inline void handler(int sig) {
+  void *array[10];
+  size_t size;
+
+  // get void*'s for all entries on the stack
+  size = backtrace(array, 10);
+
+  // print out all the frames to stderr
+  fprintf(stderr, "Error: signal %d:\n", sig);
+  backtrace_symbols_fd(array, size, STDERR_FILENO);
+  exit(1);
+}
 
 #endif

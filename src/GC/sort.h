@@ -109,16 +109,16 @@ inline void permute(const CompResultType result, IntegerArray& data, bool invers
   }
 }
 
-void cmp_swap(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int i, int j, Bit acc, bool plain_acc, int party, CompResultType& result);
+void cmp_swap(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int i, int j, Bit acc, bool plain_acc, CompResultType& result);
 
-void bitonic_merge(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, int party, CompResultType& result);
-void bitonic_sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, int party, CompResultType& result);
+void bitonic_merge(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, CompResultType& result);
+void bitonic_sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int lo, int n, Bit acc, bool plain_acc, CompResultType& result);
 // Sort data, key is the first columns
 CompResultType sort(std::vector<IntegerArray>& data, int size, Bit acc = true);
 CompResultType sort(IntegerArray& data, int size, Bit acc = true);
-CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int size, int party = PUBLIC, bool acc = true);
-CompResultType sort(IntegerArray& data, std::vector<int>& plain_key, int size, int party = PUBLIC, bool acc = true);
-CompResultType sort(std::vector<int>& plain_key, int size, int party = PUBLIC, bool acc = true);
+CompResultType sort(std::vector<IntegerArray>& data, std::vector<int>& plain_key, int size, bool acc = true);
+CompResultType sort(IntegerArray& data, std::vector<int>& plain_key, int size, bool acc = true);
+CompResultType sort(std::vector<int>& plain_key, int size, bool acc = true);
 
 } // namespace sci
 #endif
