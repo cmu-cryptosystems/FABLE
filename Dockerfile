@@ -18,11 +18,14 @@ RUN apt-get update && \
 
 # Install libOTe
 WORKDIR /workspace
-RUN git clone https://github.com/osu-crypto/libOTe.git --recursive
+RUN git config --global http.sslVerify false 
+RUN git clone --recursive --depth 1 https://github.com/osu-crypto/libOTe.git
 WORKDIR /workspace/libOTe
-RUN python3 build.py --boost --sodium -DENABLE_SILENTOT=ON \
-    && python3 build.py --install
+RUN python3 build.py --boost --sodium -DENABLE_SILENTOT=ON
+RUN python3 build.py --install
 
 COPY . /workspace/FABLE
 WORKDIR /workspace/FABLE
-RUN cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_INPUT_SIZE=20 -DLUT_OUTPUT_SIZE=20 -DLUT_MAX_LOG_SIZE=20 && cmake --build ./build --target batchlut --parallel
+RUN cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_INPUT_SIZE=20 -DLUT_OUTPUT_SIZE=20 -DLUT_MAX_LOG_SIZE=20
+RUN cmake --build ./build --parallel
+RUN git config --global http.sslVerify true
