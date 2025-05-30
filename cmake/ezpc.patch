@@ -23,3 +23,16 @@ index 37007ee..e76ae88 100644
  #include <vector>
  #include <math.h>
  #include <cstdlib>
+diff --git a/SCI/src/utils/CMakeLists.txt b/SCI/src/utils/CMakeLists.txt
+index 225bfc4..57d0168 100644
+--- a/SCI/src/utils/CMakeLists.txt
++++ b/SCI/src/utils/CMakeLists.txt
+@@ -9,7 +9,7 @@ add_library(SCI-utils INTERFACE)
+ 
+ target_compile_options(SCI-utils
+     INTERFACE
+-    "-pthread;-maes;-msse4.1;-mavx;-mavx2;-faligned-new;-std=c++17;-O3;-Wno-parentheses-equality;-Wno-deprecated-declarations;-Wno-macro-redefined")
++    "-pthread;-maes;-msse4.1;-mavx;-mavx2;-faligned-new;-std=c++20;-O3;-Wno-parentheses-equality;-Wno-deprecated-declarations;-Wno-macro-redefined")
+ #     "-pthread;-Wall;-maes;-msse4.1;-mavx;-mavx2;-faligned-new;-std=c++17;-w;-g;-ggdb;-O0")
+ 
+ if(USE_RANDOM_DEVICE)
