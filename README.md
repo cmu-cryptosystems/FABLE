@@ -13,12 +13,19 @@ We recommend setting the environment with Docker. To do this, build a Docker ima
 It is also possible to install the dependencies with conda. 
 
 ```bash
-mamba create -n fable gcc gxx cmake make ninja fmt mpfr openmp openssl clang clang-tools boost pkg-config -c conda-forge
+mamba create -n fable gcc gxx cmake=3.31 make ninja fmt mpfr openmp openssl clang clangxx boost pkg-config -c conda-forge
 ```
 
 ## Compilation
 
-We use CMake to build the project. To configure, use
+We use CMake to build the project. 
+
+First, please update the submodules if you have not already done so: 
+```bash
+git submodule update --init --recursive
+```
+
+To configure, use
 ```bash
 cmake -S . -B build
 ```
