@@ -5,7 +5,7 @@ using namespace std;
 namespace sci {
 
 
-DedupContext deduplicate(IntegerArray& in, BatchLUTConfig config) {
+DedupContext deduplicate(IntegerArray& in, FABLEConfig config) {
 
   auto sort_result = sort(in, config.batch_size);
 

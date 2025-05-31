@@ -11,7 +11,7 @@
 using namespace sci;
 using std::cout, std::endl, std::vector;
 
-int party, port = 8000, batch_size = 256, db_size = (1 << LUT_INPUT_SIZE), parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0, fuse = 0, seed = 12345;
+int party, port = 8000, batch_size = 4096, db_size = (1 << LUT_INPUT_SIZE), parallel = 1, num_threads = 16, type = 0, lut_type = 0, hash_type = 0, fuse = 0, seed = 12345;
 NetIO *io_gc;
 
 
@@ -57,12 +57,12 @@ void bench_lut() {
 	barrier(party, io_gc);
 	io_gc->flush();
 
-	cout << BLUE << "BatchLUT" << RESET << endl;
-	start_record(io_gc, "BatchLUT");
+	cout << BLUE << "FABLE Execution" << RESET << endl;
+	start_record(io_gc, "FABLE Execution");
 
 	auto result = fuse ? fable_lookup_fuse(secret_queries, lut_params, true) : fable_lookup(secret_queries, lut_params, true);
 
-	end_record(io_gc, "BatchLUT");
+	end_record(io_gc, "FABLE Execution");
 
 	// Verify
 	start_record(io_gc, "Verification");
@@ -73,12 +73,12 @@ void bench_lut() {
 	for(int batch_idx = 0; batch_idx < batch_size; ++batch_idx) {
 		check(
 			plain_result[batch_idx] == lut.at(plain_queries[batch_idx]), 
-			fmt::format("[BatchLUT] Test failed. T[{}]={}, but we get {}. ", plain_queries[batch_idx], lut.at(plain_queries[batch_idx]), plain_result[batch_idx])
+			fmt::format("[FABLE] Test failed. T[{}]={}, but we get {}. ", plain_queries[batch_idx], lut.at(plain_queries[batch_idx]), plain_result[batch_idx])
 		);
 	}
 	end_record(io_gc, "Verification");
 
-	cout << GREEN << "[BatchLUT] Test passed" << RESET << endl;
+	cout << GREEN << "[FABLE] Test passed" << RESET << endl;
 
 }
 
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 	setup_semi_honest(io_gc, party);
 	auto time_span = time_from(time_start);
 	cout << "General setup: elapsed " << time_span / 1000 << " ms." << endl;
-	cout << fmt::format("Running BatchLUT with Batch size = {}, parallel = {}, num_threads = {}, type = {}, lut_type = {}, hash_type = {}, input_size = {}, output_size = {}", batch_size, parallel, num_threads, type, lut_type, hash_type, LUT_INPUT_SIZE, LUT_OUTPUT_SIZE) << endl;
+	cout << fmt::format("Running FABLE with batch size = {}, parallel = {}, num_threads = {}, type = {}, lut_type = {}, hash_type = {}, input_size = {}, output_size = {}", batch_size, parallel, num_threads, type, lut_type, hash_type, LUT_INPUT_SIZE, LUT_OUTPUT_SIZE) << endl;
 	// utils::check(type == 0, "Only PIRANA is supported now. "); 
 	bench_lut();
 	delete io_gc;

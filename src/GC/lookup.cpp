@@ -2,11 +2,11 @@
 
 namespace sci {
 
-BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
+FABLEParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
 
 	auto params = new BatchPirParams(batch_size, lut.size(), parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
 
-	auto config = new BatchLUTConfig{
+	auto config = new FABLEConfig{
 		params->get_batch_size(), 
 		params->get_bucket_size(), 
 		(1ULL << LUT_INPUT_SIZE), 
@@ -40,7 +40,7 @@ BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_
 		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
 	}
 	
-	auto lut_params = BatchLUTParams{
+	auto lut_params = FABLEParams{
 		party, 
 		hash_type, 
 		batch_size, 
@@ -55,11 +55,11 @@ BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_
 	return lut_params; 
 }
 
-BatchLUTParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, BatchPirType type, HashType hash_type, NetIO *io_gc) {
+FABLEParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, BatchPirType type, HashType hash_type, NetIO *io_gc) {
 
 	auto params = new BatchPirParams(batch_size, db_size, parallel, num_threads, type, hash_type);
 
-	auto config = new BatchLUTConfig{
+	auto config = new FABLEConfig{
 		params->get_batch_size(), 
 		params->get_bucket_size(), 
 		(1ULL << LUT_INPUT_SIZE), 
@@ -93,7 +93,7 @@ BatchLUTParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int ba
 		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
 	}
 	
-	auto lut_params = BatchLUTParams{
+	auto lut_params = FABLEParams{
 		party, 
 		hash_type, 
 		batch_size, 
@@ -108,7 +108,7 @@ BatchLUTParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int ba
 	return lut_params; 
 }
 
-IntegerArray fable_lookup(IntegerArray secret_queries, BatchLUTParams& lut_params, bool verbose) {
+IntegerArray fable_lookup(IntegerArray secret_queries, FABLEParams& lut_params, bool verbose) {
 
 	auto& [party, hash_type, batch_size, config, prng, params, batch_server, batch_client, io_gc] = lut_params;
 
@@ -422,7 +422,7 @@ IntegerArray fable_lookup(IntegerArray secret_queries, BatchLUTParams& lut_param
     return result;
 }
 
-IntegerArray fable_lookup_fuse(IntegerArray secret_queries, BatchLUTParams& lut_params, bool verbose) {
+IntegerArray fable_lookup_fuse(IntegerArray secret_queries, FABLEParams& lut_params, bool verbose) {
 
 	auto& [party, hash_type, batch_size, config, prng, params, batch_server, batch_client, io_gc] = lut_params;
 

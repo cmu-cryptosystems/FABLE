@@ -1,5 +1,5 @@
-#ifndef BATCHLUT_SILENT_OT_H__
-#define BATCHLUT_SILENT_OT_H__
+#ifndef FABLE_SILENT_OT_H__
+#define FABLE_SILENT_OT_H__
 
 #include <cstdint>
 #include "libOTe/TwoChooseOne/Silent/SilentOtExtSender.h"

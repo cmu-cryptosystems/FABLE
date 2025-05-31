@@ -25,8 +25,8 @@ Enquiries about further applications and development opportunities are welcome.
 Modified by Deevashwer Rathee
 */
 
-#ifndef BATCHLUT_NUMBER_H__
-#define BATCHLUT_NUMBER_H__
+#ifndef FABLE_NUMBER_H__
+#define FABLE_NUMBER_H__
 #include "GC/bit.h"
 #include "custom_types.h"
 #include <tuple>

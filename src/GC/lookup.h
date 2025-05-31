@@ -17,11 +17,11 @@ namespace sci {
 
 const int client_id = 0;
 
-struct BatchLUTParams{
+struct FABLEParams{
     int party;
     int hash_type;
     int batch_size;
-    BatchLUTConfig* config;
+    FABLEConfig* config;
     osuCrypto::PRNG* prng; 
     BatchPirParams* params; 
     BatchPIRServer* batch_server; 
@@ -36,7 +36,7 @@ inline void barrier(int party, sci::NetIO* io_gc) {
 		io_gc->send_data(&prepared, sizeof(prepared));
 	} else {
 		io_gc->recv_data(&prepared, sizeof(prepared));
-		utils::check(prepared, "[BatchLUT] Synchronization failed. ");
+		utils::check(prepared, "[FABLE] Synchronization failed. ");
 	}
 }
 
@@ -49,13 +49,13 @@ Integer share_bitset(std::bitset<size> bits, int party) {
 	return res;
 }
 
-BatchLUTParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc); 
+FABLEParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc); 
 
-BatchLUTParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, BatchPirType type, HashType hash_type, NetIO *io_gc); 
+FABLEParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, BatchPirType type, HashType hash_type, NetIO *io_gc); 
 
-IntegerArray fable_lookup(IntegerArray secret_queries, BatchLUTParams& lut_params, bool verbose = false); 
+IntegerArray fable_lookup(IntegerArray secret_queries, FABLEParams& lut_params, bool verbose = false); 
 
-IntegerArray fable_lookup_fuse(IntegerArray secret_queries, BatchLUTParams& lut_params, bool verbose = false); 
+IntegerArray fable_lookup_fuse(IntegerArray secret_queries, FABLEParams& lut_params, bool verbose = false); 
 
 } // namespace sci
 #endif

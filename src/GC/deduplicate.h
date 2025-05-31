@@ -36,17 +36,17 @@ Modified by Deevashwer Rathee
 namespace sci {
 
 
-struct BatchLUTConfig {
+struct FABLEConfig {
   uint64_t batch_size, bucket_size, db_size, bitlength;
 };
     
 struct DedupContext {
   CompResultType sort_result;
   BitArray label;
-  BatchLUTConfig config;
+  FABLEConfig config;
 };
 
-DedupContext deduplicate(IntegerArray& in, BatchLUTConfig config);
+DedupContext deduplicate(IntegerArray& in, FABLEConfig config);
 
 // Integer* remap_obselete(Integer* in, Integer* inDeduplicated, Integer* resp, int b, int B, int N, int bitlength, int* cuckoo_map, Integer* constantArray);
 

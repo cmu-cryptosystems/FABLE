@@ -1,9 +1,9 @@
 cmake_minimum_required(VERSION 3.10)
 
 project(
-    BatchedLUT
-    VERSION 0.0.1 
-    LANGUAGES C CXX
+    FABLE
+    VERSION 1.0.0
+    LANGUAGES CXX
 )
 
 message (STATUS "Checking if patches are applied...")
@@ -71,7 +71,7 @@ if (NOT DEFINED LUT_OUTPUT_SIZE)
     set(LUT_OUTPUT_SIZE 20)
 endif()
 if (NOT DEFINED LUT_MAX_LOG_SIZE) 
-    set(LUT_MAX_LOG_SIZE 20)
+    set(LUT_MAX_LOG_SIZE LUT_INPUT_SIZE)
 endif()
 
 find_package(FMT REQUIRED)

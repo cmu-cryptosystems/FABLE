@@ -1,12 +1,12 @@
 macro (add_GC_test _name)
 	add_executable(${_name} "test_${_name}.cpp")
-    target_link_libraries(${_name} batchlut-GC batchlut-utils) 
+    target_link_libraries(${_name} fable-GC) 
     target_include_directories(${_name} PRIVATE "${PROJECT_SOURCE_DIR}/src")
 endmacro()
 
 macro (add_test_float _name)
 	add_executable(${_name} "test_${_name}.cpp")
-    target_link_libraries(${_name} batchlut-GC batchlut-OT batchlut-utils) 
+    target_link_libraries(${_name} fable-GC fable-OT) 
     target_include_directories(${_name} PRIVATE "${PROJECT_SOURCE_DIR}/src")
 endmacro()
 

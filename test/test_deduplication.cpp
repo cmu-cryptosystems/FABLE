@@ -19,7 +19,7 @@ void test_deduplication() {
 
 	int bucket_size = 3 * batch_size / 2;
 
-	BatchLUTConfig config{
+	FABLEConfig config{
 		batch_size, 
 		bucket_size, 
 		(1 << bitlength), 

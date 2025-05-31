@@ -1,5 +1,5 @@
-#ifndef BATCHLUT_CUSTOM_TYPES_H__
-#define BATCHLUT_CUSTOM_TYPES_H__
+#ifndef FABLE_CUSTOM_TYPES_H__
+#define FABLE_CUSTOM_TYPES_H__
 
 #include <vector>
 #include <GC/integer.h>

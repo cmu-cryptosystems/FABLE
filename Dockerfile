@@ -26,6 +26,5 @@ RUN python3 build.py --install
 
 COPY . /workspace/FABLE
 WORKDIR /workspace/FABLE
-RUN cmake -S . -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=true -DLUT_INPUT_SIZE=20 -DLUT_OUTPUT_SIZE=20 -DLUT_MAX_LOG_SIZE=20
-RUN cmake --build ./build --parallel
+RUN cmake -S . -B build && cmake --build ./build --parallel
 RUN git config --global http.sslVerify true
