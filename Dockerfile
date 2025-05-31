@@ -14,6 +14,7 @@ RUN apt-get update && \
         libfmt-dev \
         libtool \
         pkg-config \
+        iproute2 \
     && apt-get clean
 
 # Install libOTe
