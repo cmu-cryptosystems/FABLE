@@ -22,7 +22,7 @@ WORKDIR /workspace
 RUN git config --global http.sslVerify false 
 RUN git clone --recursive --depth 1 https://github.com/osu-crypto/libOTe.git
 WORKDIR /workspace/libOTe
-RUN python3 build.py --boost --sodium -DENABLE_SILENTOT=ON
+RUN python3 build.py --boost --sodium -DENABLE_ALL_OT=ON
 RUN python3 build.py --install
 
 COPY . /workspace/FABLE
