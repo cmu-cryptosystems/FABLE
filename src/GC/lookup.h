@@ -49,6 +49,8 @@ Integer share_bitset(std::bitset<size> bits, int party) {
 	return res;
 }
 
+FABLEParams fable_prepare(vector<uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc);
+
 FABLEParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc); 
 
 FABLEParams fable_prepare(map<uint64_t, rawdatablock>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, BatchPirType type, HashType hash_type, NetIO *io_gc); 

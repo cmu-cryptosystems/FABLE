@@ -36,10 +36,9 @@ inline double itof(uint64_t x, long double fixedpoint_range, double input_range 
 	return x * input_range / fixedpoint_range;
 }
 
-inline std::map<uint64_t, uint64_t> get_lut(const LUTType lut_typ, uint64_t lut_size, int seed, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
+inline std::vector<uint64_t> get_lut_vec(const LUTType lut_typ, uint64_t lut_size, int seed, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
     long double range = pow(2.0L, output_bits);
-	std::map<uint64_t, uint64_t> lut;
-	std::vector<uint64_t> lut_content(lut_size);
+	std::vector<uint64_t> lut(lut_size);
 	std::vector<double> abs_error(lut_size, 0);
 	std::vector<double> rel_error(lut_size, 0);
 
@@ -59,28 +58,34 @@ inline std::map<uint64_t, uint64_t> get_lut(const LUTType lut_typ, uint64_t lut_
 			double input = (double)i/lut_size * 3 + 1; // from 1 to 4
 			double value = std::tgamma(input);
             assert (value < 10);
-			lut_content[i] = ftoi(value, range);
-			abs_error[i] = abs(itof(lut_content[i], range) - value);
+			lut[i] = ftoi(value, range);
+			abs_error[i] = abs(itof(lut[i], range) - value);
 			rel_error[i] = abs_error[i] / value;
 		} else if (lut_typ == Filled) {
-            lut_content[i] = output_bits == 64 ? UINT64_MAX : (1LL << output_bits) - 1;
+            lut[i] = output_bits == 64 ? UINT64_MAX : (1LL << output_bits) - 1;
         } else if (lut_typ == Cauchy_dis) {
 			double input = (double)i/lut_size * 80 - 40; // from -40 to 40
 			double value = 1.0 / (M_PI * (1 + input * input));
-			lut_content[i] = ftoi(value, range, 0.35);
-			abs_error[i] = abs(itof(lut_content[i], range, 0.35) - value);
+			lut[i] = ftoi(value, range, 0.35);
+			abs_error[i] = abs(itof(lut[i], range, 0.35) - value);
 			rel_error[i] = abs_error[i] / value;
 		} else {
 			throw std::invalid_argument("LUT Type is not supported. ");
 		}
-	}
-	for (uint64_t i = 0; i < lut_size; i ++) {
-		lut[i] = lut_content[i];
 	}
 	std::cout << fmt::format(
 		"LUT built. \nMax Absolute error = {}\nMax Relative error = {}", 
 		*std::max_element(abs_error.begin(), abs_error.end()),
 		*std::max_element(rel_error.begin(), rel_error.end())
 	) << std::endl;
+	return lut;
+}
+
+inline std::map<uint64_t, uint64_t> get_lut_map(const LUTType lut_typ, uint64_t lut_size, int seed, int input_bits = LUT_INPUT_SIZE, int output_bits = LUT_OUTPUT_SIZE) {
+	std::map<uint64_t, uint64_t> lut;
+	std::vector<uint64_t> lut_content = get_lut_vec(lut_typ, lut_size, seed, input_bits, output_bits);
+	for (uint64_t i = 0; i < lut_size; i ++) {
+		lut[i] = lut_content[i];
+	}
 	return lut;
 }

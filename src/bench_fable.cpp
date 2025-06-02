@@ -18,7 +18,7 @@ NetIO *io_gc;
 
 void bench_lut() {
 	
-	auto lut = get_lut((LUTType)lut_type, db_size, seed);
+	auto lut = get_lut_vec((LUTType)lut_type, db_size, seed);
 
 	start_record(io_gc, "Protocol Preparation");
 	
@@ -44,8 +44,8 @@ void bench_lut() {
 		if (i < (batch_size + 1) / 2) {
 			do {
 				plain_queries[i] = rand() % (1 << LUT_INPUT_SIZE);
-			} while (!lut.count(plain_queries[i]));
-			assert (lut.count(plain_queries[i]) == 1);
+			} while (!std::count(lut.begin(), lut.end(), plain_queries[i]));
+			assert (std::count(lut.begin(), lut.end(), plain_queries[i]) == 1);
 		} else {
 			plain_queries[i] = plain_queries[rand() % ((batch_size + 1) / 2)]; // Force duplicates. 
 		}

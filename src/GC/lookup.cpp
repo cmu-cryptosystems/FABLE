@@ -2,6 +2,59 @@
 
 namespace sci {
 
+FABLEParams fable_prepare(vector<uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
+
+	auto params = new BatchPirParams(batch_size, lut.size(), parallel, num_threads, (BatchPirType)type, (HashType)hash_type);
+
+	auto config = new FABLEConfig{
+		params->get_batch_size(), 
+		params->get_bucket_size(), 
+		(1ULL << LUT_INPUT_SIZE), 
+		LUT_INPUT_SIZE
+	};
+
+	BatchPIRServer* batch_server; 
+	BatchPIRClient* batch_client;
+	
+    osuCrypto::PRNG* prng = new osuCrypto::PRNG(osuCrypto::sysRandomSeed());
+
+	if (party == BOB) {
+		batch_client = new BatchPIRClient(*params);
+		auto [glk_buffer, rlk_buffer] = batch_client->get_public_keys();
+
+		// send key_buf and query_buf
+		uint32_t glk_size = glk_buffer.size(), rlk_size = rlk_buffer.size();
+		io_gc->send_data(&glk_size, sizeof(uint32_t));
+		io_gc->send_data(&rlk_size, sizeof(uint32_t));
+		io_gc->send_data(glk_buffer.data(), glk_size);
+		io_gc->send_data(rlk_buffer.data(), rlk_size);
+	} else {
+		batch_server = new BatchPIRServer(*params, *prng);
+		batch_server->populate_raw_db(lut);
+		uint32_t glk_size, rlk_size;
+		io_gc->recv_data(&glk_size, sizeof(uint32_t));
+		io_gc->recv_data(&rlk_size, sizeof(uint32_t));
+		vector<seal::seal_byte> glk_buffer(glk_size), rlk_buffer(rlk_size);
+		io_gc->recv_data(glk_buffer.data(), glk_size);
+		io_gc->recv_data(rlk_buffer.data(), rlk_size);
+		batch_server->set_client_keys(client_id, {glk_buffer, rlk_buffer});
+	}
+	
+	auto lut_params = FABLEParams{
+		party, 
+		hash_type, 
+		batch_size, 
+		config, 
+		prng, 
+		params,  
+		batch_server, 
+		batch_client, 
+		io_gc
+	};
+
+	return lut_params; 
+}
+
 FABLEParams fable_prepare(map<uint64_t, uint64_t>& lut, int party, int batch_size, int db_size, bool parallel, int num_threads, int type, int hash_type, NetIO *io_gc) {
 
 	auto params = new BatchPirParams(batch_size, lut.size(), parallel, num_threads, (BatchPirType)type, (HashType)hash_type);

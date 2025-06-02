@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
         std::ofstream out(filename);
         out << dump_flute_lut(get_lut_test(), 8, 8);
     } else {
-        auto lut = get_lut((LUTType)lut_type, input_bits, output_bits);
+        auto lut = get_lut_map((LUTType)lut_type, input_bits, output_bits);
 
         string filename = fmt::format("flute_luts/LUT_{}_{}_{}.lut", input_bits, output_bits, lut_type_to_string((LUTType)lut_type));
         std::ofstream out(filename);
