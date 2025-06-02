@@ -23,6 +23,7 @@ int lut_type = 0;
 int num_threads = 1;
 string address = "127.0.0.1";
 int port = 32000;
+int seed = 12345;
 std::random_device rand_div;
 std::mt19937 generator(rand_div());
 
@@ -31,10 +32,11 @@ int main(int argc, char **argv) {
 
   amap.arg("r", party, "Role of party: ALICE/SERVER = 1; BOB/CLIENT = 2");
   amap.arg("p", port, "Port Number");
+	amap.arg("seed", seed, "random seed");
   amap.arg("len", lut_bitlength, "Bit Length");
-  amap.arg("s", batch_size , "Batch Size");
+  amap.arg("bs", batch_size , "Batch Size");
   amap.arg("l", lut_type , "0 = Random LUT; 1 = Gamma LUT");
-  amap.arg("t", num_threads , "#Threads");
+  amap.arg("thr", num_threads , "#Threads");
   amap.arg("ip", address, "IP Address of server (ALICE)");
   amap.parse(argc, argv);
 
@@ -44,7 +46,7 @@ int main(int argc, char **argv) {
   auto chl = cp::asioConnect(ip, party == ALICE);
 
   auto lut_size = 1ULL << lut_bitlength;
-	auto lut = get_lut((LUTType)lut_type, lut_bitlength, lut_bitlength);
+	auto lut = get_lut((LUTType)lut_type, lut_size, seed, lut_bitlength, lut_bitlength);
   
   vector<uint32_t> plain_queries(batch_size);
   vector<uint32_t> input(batch_size);
