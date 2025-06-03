@@ -27,5 +27,6 @@ RUN python3 build.py --install
 
 COPY . /workspace/FABLE
 WORKDIR /workspace/FABLE
+RUN git submodule update --init --recursive
 RUN cmake -S . -B build && cmake --build ./build --parallel
 RUN git config --global http.sslVerify true
