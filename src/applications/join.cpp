@@ -17,12 +17,6 @@ typedef vector<PlainField> PlainTable; // The first column is PK
 typedef vector<IntegerArray> Table; // The first column is PK
 
 // FABLE is a drop-in replacement for PK-PK join and PK-FK join. 
-// Suppose we have three tables:
-// customer: [c_ssn (PK), c_orderkey], 4096 rows, held by BOB
-// balance: [b_ssn (PK), b_acctbal], 4096 rows, held by ALICE
-// orders: [o_orderkey (PK), o_totalprice], 1M rows, held by ALICE
-// We want to make the following query: 
-// select COUNT(*) from customer, balance, orders where c_ssn == b_ssn and c_orderkey == o_orderkey and b_acctbal < o_totalprice
 
 const size_t customer_size = 4096; 
 const size_t balance_size = 4096; 
@@ -255,18 +249,12 @@ void bench_join() {
 	auto plain_result_customer_balance = reveal(customer_with_balance, BOB);
 	auto gt_customer_balance = join_cleartext(customer, balance);
 	gt_customer_balance.erase(gt_customer_balance.begin());
-	// if (party == BOB)
-	// 	check_eq(plain_result_customer_balance, gt_customer_balance);
 	
 	auto plain_result = reveal(final_aggregated_result, BOB);
 	for (auto& col : plain_result)
 		col.erase(std::remove(col.begin(), col.end(), 0), col.end());
 	auto gt = join_cleartext(gt_customer_balance, orders);
 	gt.erase(gt.begin());
-	// print(plain_result, "result");
-	// print(gt, "gt");
-	// if (party == BOB)
-	// 	check_eq(plain_result, gt);
 	
 	uint32_t gt_violated = 0;
 	for (int row_idx = 0; row_idx < gt[0].size(); row_idx++) {
@@ -279,9 +267,9 @@ void bench_join() {
 	end_record(io_gc, "Verification");
 
 	if (party == BOB) {
-		cout << GREEN << "[Application - Embedding] Test passed" << RESET << endl;
+		cout << GREEN << "[Application - Join] Test passed" << RESET << endl;
 	} else {
-		cout << "[Application - Embedding] Validation is carried out on ALICE side. " << endl;
+		cout << "[Application - Join] Validation is carried out on ALICE side. " << endl;
 	}
 
 }
