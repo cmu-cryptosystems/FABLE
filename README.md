@@ -1,6 +1,8 @@
 # FABLE: Batched Evaluation on Confidential Lookup Tables in 2PC
 
-This is the end-to-end implementation of the USENIX Security '25 paper "FABLE: Batched Evaluation on Confidential Lookup Tables in 2PC". 
+This is the end-to-end implementation of the USENIX Security '25 paper "FABLE: Batched Evaluation on Confidential Lookup Tables in 2PC." 
+
+The extended version of FABLE's paper can be found at https://eprint.iacr.org/2025/1081. You may also find the artifact evaluation at FABLE-AE (https://github.com/timzsu/FABLE-AE). 
 
 ## Dependency Installation
 
@@ -73,4 +75,18 @@ should be launched on two terminals.
 - `h`: The OPRF type. Default: 0. 
     - 0 = LowMC
     - 1 = AES
-- `f`: Whether to do operator fusion to save communication rounds. Default: 1. 
+- `f`: Whether to do operator fusion to save communication rounds. Default: 1.
+
+## Citation
+
+If you would like to use our implementation of FABLE, consider citing our paper:
+```bibtex
+@misc{cryptoeprint:2025/1081,
+      author = {Zhengyuan Su and Qi Pang and Simon Beyzerov and Wenting Zheng},
+      title = {{FABLE}: Batched Evaluation on Confidential Lookup Tables in {2PC}},
+      howpublished = {Cryptology {ePrint} Archive, Paper 2025/1081},
+      year = {2025},
+      url = {https://eprint.iacr.org/2025/1081}
+}
+```
+We will update the entry once the paper is published on USENIX Security '25. 
