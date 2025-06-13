@@ -3,7 +3,7 @@
 	url = https://github.com/mpc-msri/EzPC.git
 [submodule "extern/BatchPIR"]
 	path = extern/BatchPIR
-	url = https://github.com/timsu1104/LUT-PIRANA.git
+	url = https://github.com/timzsu/LUT-PIRANA.git
 [submodule "extern/SEAL"]
 	path = extern/SEAL
 	url = https://github.com/microsoft/SEAL.git
