@@ -20,9 +20,10 @@ RUN apt-get update && \
 # Install libOTe
 WORKDIR /workspace
 RUN git config --global http.sslVerify false 
-RUN git clone --recursive --depth 1 https://github.com/osu-crypto/libOTe.git
+RUN git clone --recursive https://github.com/osu-crypto/libOTe.git
 WORKDIR /workspace/libOTe
-RUN python3 build.py --boost --sodium -DENABLE_ALL_OT=ON
+RUN git checkout 90dbd858cb47f1381fd9186f8436b14edc0f0dbe
+RUN python3 build.py --boost --sodium --all
 RUN python3 build.py --install
 
 COPY . /workspace/FABLE
