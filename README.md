@@ -61,11 +61,11 @@ should be launched on two terminals.
 `$NETWORK_HOST` is the IP address of ALICE (the terminal that is running with `r=1`). If the terminals are on the same machine, then `$NETWORK_HOST` can be set as `127.0.0.1`. 
 
 `$optional_args` contains the following options: 
-- `p`: the port number for communication. Default: 8000. 
-- `bs`: the batch size of the input. Default: 4096. 
-- `db`: the LUT size. Default: `exp2(LUT_INPUT_SIZE)`. 
+- `p`: The port number for communication. Default: 8000. 
+- `bs`: The batch size of the input. Default: 4096. 
+- `db`: The LUT size. Default: `exp2(LUT_INPUT_SIZE)`. 
 - `seed`: The random seed. Default: 12345.
-- `par`: Whether use parallelization. Default: 1.
+- `par`: Whether enable parallelization. Default: 1.
 - `thr`: Number of threads used in parallelization. Default: 16.
 - `l`: Type of the LUT. Default: 0.
     - 0 = Random LUT. 
@@ -75,7 +75,7 @@ should be launched on two terminals.
 - `h`: The OPRF type. Default: 0. 
     - 0 = LowMC
     - 1 = AES
-- `f`: Whether to do operator fusion to save communication rounds. Default: 1.
+- `f`: Whether to do operator fusion to save communication rounds. Default: 0.
 
 ## Citation
 
