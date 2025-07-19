@@ -1,5 +1,8 @@
 # FABLE: Batched Evaluation on Confidential Lookup Tables in 2PC
 
+[![Build](https://github.com/timzsu/FABLE/actions/workflows/build.yml/badge.svg)](https://github.com/timzsu/FABLE/actions/workflows/build.yml)
+[![GitHub license](https://img.shields.io/github/license/timzsu/FABLE?color=blue)](https://github.com/timzsu/FABLE/blob/main/LICENSE)
+
 This is the end-to-end implementation of the USENIX Security '25 paper "FABLE: Batched Evaluation on Confidential Lookup Tables in 2PC." 
 
 The extended version of FABLE's paper can be found at https://eprint.iacr.org/2025/1081. You may also find the artifact evaluation at FABLE-AE (https://github.com/timzsu/FABLE-AE). 

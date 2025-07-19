@@ -14,11 +14,13 @@ jobs:
       # 1️⃣ Clone the repository (the repo already contains the Dockerfile)
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
       # 2️⃣ Build the Docker image
       - name: Build FABLE Docker image
         run: |
-          docker build ./FABLE -t fable
+          docker build . -t fable
 
       # 3️⃣ Quick test
       - name: Simple test
