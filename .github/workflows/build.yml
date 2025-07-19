@@ -25,7 +25,7 @@ jobs:
       # 3️⃣ Quick test
       - name: Simple test
         run: |
-          docker run -d --name fablebox fable:1.0 tail -f /dev/null
+          docker run -d --name fablebox fable tail -f /dev/null
           docker exec fablebox /workspace/FABLE/build/bin/fable 127.0.0.1 r=1 &
           docker exec fablebox /workspace/FABLE/build/bin/fable 127.0.0.1 r=2 
           docker rm fablebox
