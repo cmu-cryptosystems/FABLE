@@ -7,6 +7,20 @@ This is the end-to-end implementation of the USENIX Security '25 paper "FABLE: B
 
 The extended version of FABLE's paper can be found at https://eprint.iacr.org/2025/1081. You may also find the artifact evaluation at FABLE-AE (https://github.com/timzsu/FABLE-AE). 
 
+## Code Structure
+
+The code contains the following components:
+1. `src`: The source code of FABLE. 
+    - `src/GC`: FABLE's subprotocols' implementation. 
+    - `src/OT`: Our re-implementation of the SPLUT+ baseline. 
+    - `src/utils`: Timing utilities. 
+    - `src/bench_fable.cpp`: The benchmarking script for FABLE. 
+    - `src/bench_splut.cpp`: The benchmarking script for SPLUT+. 
+2. `test`: The unit tests for FABLE and some other baselines. 
+3. `extern`: The external libraries. 
+4. `cmake`: Patches to apply on the external libraries. 
+5. `.github`: The Github CI workflow to automatically build the code. 
+
 ## Dependency Installation
 
 ### Install with Docker
